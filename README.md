@@ -71,7 +71,7 @@ Tudo é um serviço Python puro em `playgo/`; o site (`web/app.py`) e a API (`ap
 - **Perfis de acesso** (`administracao.py`, tela `/administracao`): **administrador** (tudo, inclusive promover/rebaixar; nunca fica sem um),
   **moderador geral** (vê e decide a fila e oculta em qualquer mural, sem gerir usuários nem desfazer o que um admin ocultou) e usuário comum.
   Toda mudança de perfil é auditada e a pessoa é avisada. Organizadores e donos de comunidade continuam moderando só o que é deles.
-- **Planos** (`planos.py`, `cobranca.py`, tela **Meu plano**): Atleta grátis; **Organizador** (campeonatos e atividades sem limite) e **Arena** (tudo isso + arenas, quadras,
+- **Planos** (`planos.py`, `cobranca.py`, tela **Meu plano**): Usuário grátis (vê, publica no feed e participa); **Pro** (organiza atividades, com limites); **Organizador** (campeonatos e atividades sem limite) e **Arena** (tudo isso + arenas, quadras,
   agenda e horários divulgados) são pagos. Teste de 30 dias automático + 7 de tolerância; vencido, não cria nem divulga nada novo, mas o que existe continua.
   Participar é sempre grátis. Preços e limites o administrador edita; cobrança recorrente pelo Asaas (Pix, boleto, cartão) com webhook. Ver docs/deploy.md.
 - **Atividade**: pública, só autorizados (você aprova ou convida pelo `@usuario`) ou só por link (não aparece em lugar nenhum).

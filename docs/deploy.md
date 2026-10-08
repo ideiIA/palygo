@@ -89,7 +89,7 @@ $$);
 
 ## Planos e mensalidades (Asaas)
 
-Perfis: **Atleta** (grátis: participa de tudo e cria atividades simples), **Organizador** (campeonatos e atividades sem limite) e **Arena**
+Perfis: **Usuário** (grátis: vê, publica no feed e participa), **Pro** (organiza atividades com limites), **Organizador** (campeonatos e atividades sem limite) e **Arena**
 (tudo do Organizador + arenas, quadras, agenda e divulgação de horários). Teste grátis de 30 dias (começa sozinho na primeira vez que a pessoa
 precisa do recurso, uma vez por plano) e 7 dias de tolerância; depois, não cria nem divulga nada novo (o que existe continua). O administrador não paga.
 

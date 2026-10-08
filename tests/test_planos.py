@@ -49,7 +49,7 @@ def _camp(s, fabrica, org):
 
 def _queimar_testes(s, u, plano_atual="gratuito"):
     """Pessoa que já usou os dois testes e está fora da tolerância."""
-    s.add(Assinatura(usuario_id=u.id, plano="arena", status="cancelada", origem="teste", testes_usados=["organizador", "arena"], vigente_ate=agora().date() - timedelta(days=60)))
+    s.add(Assinatura(usuario_id=u.id, plano="arena", status="cancelada", origem="teste", testes_usados=["pro", "organizador", "arena"], vigente_ate=agora().date() - timedelta(days=60)))
     s.commit()
 
 
@@ -60,34 +60,48 @@ def _admin(fabrica, s):
     return a
 
 
-# ---------------------------------------------------------------- atleta gratuito
+# ---------------------------------------------------------------- usuário (gratuito) e Pro
 
 
-def test_atleta_cria_atividade_simples_de_graca_sem_plano(s, fabrica):
-    u = fabrica.atleta("Atleta")
-    _jogo(s, fabrica, u, max_p=30)
+def _dar_pro(s, fabrica, u):
+    planos.conceder(s, _admin(fabrica, s), u.id, "pro", agora().date() + timedelta(days=30))
+
+
+def test_usuario_gratuito_nao_organiza_e_o_primeiro_pedido_abre_o_teste_do_pro(s, fabrica):
+    u = fabrica.atleta("Usuario")
     sit = planos.situacao(s, u)
     assert (sit["plano"], sit["status"]) == ("gratuito", "gratuito") and planos.assinatura_de(s, u) is None
+    assert sit["teste_disponivel"] == ["pro", "organizador", "arena"]
+    assert planos.regras(s, "gratuito").pode_atividade is False and planos.regras(s, "pro").pode_atividade is True
+    _jogo(s, fabrica, u, max_p=30)  # organizar atividade é do Pro: abre o teste de 30 dias
+    sit = planos.situacao(s, u)
+    assert (sit["plano"], sit["status"]) == ("pro", "teste") and planos.assinatura_de(s, u).testes_usados == ["pro"]
+    assert sit["teste_disponivel"] == ["organizador", "arena"]
 
 
-def test_passou_do_limite_comeca_o_teste_gratis_do_organizador(s, fabrica):
+def test_passou_do_limite_do_pro_comeca_o_teste_gratis_do_organizador(s, fabrica):
     u = fabrica.atleta("Organizador em potencial")
+    _dar_pro(s, fabrica, u)
+    _jogo(s, fabrica, u, max_p=30)  # dentro do limite do Pro
+    assert planos.situacao(s, u)["plano"] == "pro"
     _jogo(s, fabrica, u, max_p=40)  # > 30 participantes
     sit = planos.situacao(s, u)
     a = planos.assinatura_de(s, u)
     assert (sit["plano"], sit["status"]) == ("organizador", "teste")
     assert a.teste_ate == agora().date() + timedelta(days=settings.teste_dias) and a.testes_usados == ["organizador"]
     assert s.query(Notificacao).filter(Notificacao.usuario_id == u.id, Notificacao.titulo.like("%Teste grátis%")).count() == 1
-    assert sit["teste_disponivel"] == ["arena"]  # o do Arena ainda não foi usado
+    assert sit["teste_disponivel"] == ["arena"]  # o do Arena ainda não foi usado; o do Pro já está incluído
 
 
 def test_limite_de_atividades_abertas(s, fabrica):
     u = fabrica.atleta("Muitos jogos")
+    _dar_pro(s, fabrica, u)
     for _ in range(5):
         _jogo(s, fabrica, u)
-    assert planos.assinatura_de(s, u) is None
+    assert planos.situacao(s, u)["plano"] == "pro"
     _jogo(s, fabrica, u)  # a 6ª abre o teste do Organizador
-    assert planos.situacao(s, u)["status"] == "teste"
+    sit = planos.situacao(s, u)
+    assert (sit["plano"], sit["status"]) == ("organizador", "teste")
 
 
 def test_campeonato_e_arena_pedem_plano_com_teste_automatico(s, fabrica):
@@ -110,9 +124,9 @@ def test_sem_teste_disponivel_vira_plano_necessario(s, fabrica):
     with pytest.raises(PlanoNecessario) as e2:
         arenas.criar(s, u, "Arena", *PERTO)
     assert e2.value.plano == "arena"
-    with pytest.raises(PlanoNecessario):
-        _jogo(s, fabrica, u, max_p=50)
-    _jogo(s, fabrica, u, max_p=20)  # o gratuito segue valendo
+    with pytest.raises(PlanoNecessario) as e3:
+        _jogo(s, fabrica, u, max_p=20)  # o plano Usuário não organiza atividades
+    assert e3.value.plano == "pro" and "Pro" in str(e3.value)
 
 
 def test_participar_continua_gratis_mesmo_vencido(s, fabrica):
@@ -188,13 +202,20 @@ def test_admin_define_precos_e_limites(s, fabrica):
         planos.salvar_regras(s, comum, "organizador", valor_mensal=Decimal(10))
     r = planos.salvar_regras(s, admin, "organizador", valor_mensal=Decimal("39.90"), nome="Organizador Pro")
     assert r["valor_mensal"] == 39.9 and r["assinavel"] and r["nome"] == "Organizador Pro"
-    planos.salvar_regras(s, admin, "gratuito", max_participantes=12, max_atividades_abertas=2)
+    planos.salvar_regras(s, admin, "pro", max_participantes=12, max_atividades_abertas=2)
     u = fabrica.atleta("Limitado")
+    _dar_pro(s, fabrica, u)
     _jogo(s, fabrica, u, max_p=12)
-    assert planos.assinatura_de(s, u) is None  # dentro do novo limite
+    assert planos.situacao(s, u)["plano"] == "pro"  # dentro do novo limite
     _jogo(s, fabrica, u, max_p=13)  # passou do limite que o admin definiu: abre o teste do Organizador
-    assert planos.situacao(s, u)["status"] == "teste"
-    planos.salvar_regras(s, admin, "gratuito", max_participantes=30, max_atividades_abertas=5)
+    assert planos.situacao(s, u)["plano"] == "organizador"
+    planos.salvar_regras(s, admin, "pro", max_participantes=30, max_atividades_abertas=5)
+    # o administrador também pode liberar atividades para o plano Usuário
+    outro = fabrica.atleta("Sem Pro")
+    assert planos.salvar_regras(s, admin, "gratuito", pode_atividade=True)["pode_atividade"] is True
+    _jogo(s, fabrica, outro)
+    assert planos.assinatura_de(s, outro) is None
+    planos.salvar_regras(s, admin, "gratuito", pode_atividade=False)
     planos.salvar_regras(s, admin, "organizador", valor_mensal=Decimal(0), nome="Organizador")
 
 
@@ -253,6 +274,19 @@ def test_assinar_cria_cliente_e_assinatura_no_asaas(s, fabrica, asaas):
     # a pessoa reencontra a fatura (2ª via) em Meu plano
     fatura = planos.resumo(s, u)["cobrancas"]
     assert len(fatura) == 1 and fatura[0]["link"] == "https://sandbox.asaas.com/i/abc" and fatura[0]["status"] == "PENDING"
+
+
+def test_assinar_o_plano_pro(s, fabrica, asaas):
+    u = fabrica.atleta("Assina Pro")
+    admin = _admin(fabrica, s)
+    with pytest.raises(ErroNegocio, match="ainda não foi definido"):
+        cobranca.assinar(s, u, "pro", "529.982.247-25")
+    planos.salvar_regras(s, admin, "pro", valor_mensal=Decimal("19.90"))
+    try:
+        r = cobranca.assinar(s, u, "pro", "529.982.247-25")
+        assert r["plano"] == "pro" and r["valor"] == 19.9 and planos.assinatura_de(s, u).plano == "pro"
+    finally:
+        planos.salvar_regras(s, admin, "pro", valor_mensal=Decimal(0))
 
 
 def test_assinar_valida_dados(s, fabrica, asaas, monkeypatch):
@@ -332,7 +366,7 @@ def test_api_devolve_402_com_o_plano_necessario(banco):
             s.add(Assinatura(usuario_id=uid, plano="arena", status="cancelada", origem="teste", testes_usados=["organizador", "arena"], vigente_ate=agora().date() - timedelta(days=60)))
             s.commit()
         meu = c.get("/api/v1/planos", headers=h).json()
-        assert meu["plano"] == "gratuito" and meu["status"] == "vencida" and len(meu["planos"]) == 3 and meu["regras"]["max_participantes"] == 30
+        assert meu["plano"] == "gratuito" and meu["status"] == "vencida" and len(meu["planos"]) == 4 and meu["regras"]["max_participantes"] == 30
         mods = {m["codigo"]: m["id"] for m in c.get("/api/v1/modalidades", headers=h).json()}
         hoje = agora().date()
         camp = {"modalidade_id": mods["futsal"], "nome": "Copa", "data_inicio": str(hoje + timedelta(days=20)), "inscricao_ate": str(hoje + timedelta(days=10)), "max_equipes": 8, "local_nome": "G", "latitude": PERTO[0], "longitude": PERTO[1]}
@@ -360,7 +394,7 @@ def test_api_webhook_e_painel_admin(banco, monkeypatch):
             s.query(Usuario).filter(Usuario.id == adm_id).update({Usuario.admin: True})
             s.commit()
         assert c.get("/api/v1/admin/planos", headers=comum).status_code == 403
-        assert [p["codigo"] for p in c.get("/api/v1/admin/planos", headers=adm).json()] == ["gratuito", "organizador", "arena"]
+        assert [p["codigo"] for p in c.get("/api/v1/admin/planos", headers=adm).json()] == ["gratuito", "pro", "organizador", "arena"]
         r = c.put("/api/v1/admin/planos/arena", headers=adm, json={"valor_mensal": "99.90"}).json()
         assert r["valor_mensal"] == 99.9 and r["pode_arena"] and r["assinavel"]
         assert c.put("/api/v1/admin/planos/arena", headers=comum, json={"valor_mensal": "1"}).status_code == 403

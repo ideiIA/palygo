@@ -65,6 +65,7 @@ h1, h2, h3 { margin: 0; }
 .tag.green, .tag.verde { background: #e6fbf2; color: #008f5b; }
 .tag.orange, .tag.laranja { background: #fff0df; color: #d96a00; }
 .tag.roxo { background: #f0edff; color: var(--purple); }
+.tag.azul { background: #e5f1ff; color: #1b64c8; }
 .tag.cinza { background: #eef0f4; color: var(--muted); }
 .tag.rosa { background: #ffe9f1; color: #d72561; }
 .card h3 { margin: 13px 0 6px; font-size: 17px; }

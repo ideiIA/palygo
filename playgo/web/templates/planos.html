@@ -8,7 +8,7 @@
 <p class="suave" style="margin-top:18px">Participar de atividades, grupos, comunidades e campeonatos é <b>sempre gratuito</b>. A cobrança é mensal e recorrente pelo Asaas (Pix, boleto ou cartão); você cancela quando quiser e o acesso segue até o fim do período pago. Veja os <a href="/termos">Termos de Uso</a>.</p>
 <script>
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const NOME = { gratuito: 'Atleta', organizador: 'Organizador', arena: 'Arena' };
+  const NOME = { gratuito: 'Usuário', pro: 'Pro', organizador: 'Organizador', arena: 'Arena' };
   const brl = (v) => (v ? 'R$ ' + Number(v).toFixed(2).replace('.', ',') + '/mês' : 'valor a definir');
   const fmt = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
   let P = null;
@@ -21,13 +21,14 @@
     if (p.status === 'cancelada') return ['ok', `Plano <b>${NOME[p.plano]}</b> cancelado: segue valendo até <b>${f}</b>, sem renovação.`];
     if (p.status === 'tolerancia') return ['erro', `⚠️ O plano <b>${NOME[p.plano]}</b> venceu em ${f}. Você tem até <b>${t}</b> de tolerância; depois, não dá mais para criar nem divulgar nada novo (o que já existe continua).`];
     if (p.status === 'vencida') return ['erro', `O acesso ao plano <b>${NOME[p.plano_contratado]}</b> terminou em ${f}. Atividades e dados continuam, mas criar e divulgar coisas novas exige assinar de novo.`];
-    return ['', 'Você está no plano <b>Atleta</b> (gratuito). Crie atividades simples à vontade; para campeonatos, atividades maiores ou uma arena, escolha um plano abaixo.'];
+    return ['', 'Você está no plano <b>Usuário</b> (gratuito): vê tudo, publica no feed e participa de atividades. Para organizar atividades, campeonatos ou uma arena, escolha um plano abaixo.'];
   }
 
   function cartao(pl) {
     const atual = P.plano_contratado === pl.codigo || (pl.codigo === 'gratuito' && P.plano === 'gratuito');
     const lim = pl.codigo === 'gratuito'
-      ? `Até ${pl.max_participantes || '∞'} participantes por atividade e ${pl.max_atividades_abertas || '∞'} atividades abertas ao mesmo tempo. Sem campeonatos.`
+      ? 'Ver tudo, publicar e comentar no feed e participar de atividades. Não organiza atividades.'
+      : pl.codigo === 'pro' ? `Organiza atividades: até ${pl.max_participantes || '∞'} participantes por atividade e ${pl.max_atividades_abertas || '∞'} abertas ao mesmo tempo. Sem campeonatos.`
       : pl.codigo === 'organizador' ? 'Atividades sem limite e campeonatos.' : 'Tudo do Organizador, mais arenas, quadras, agenda e divulgação de horários.';
     const podeTeste = P.teste_disponivel.includes(pl.codigo) && P.status !== 'administrador';
     let acao = '';
@@ -38,7 +39,7 @@
         acao += pl.assinavel && P.cobranca_ativa ? `<button class="btn purple" data-a="assinar" data-p="${pl.codigo}">Assinar</button>` : `<span class="suave">${pl.assinavel ? 'Cobrança ainda não ativada.' : 'Valor ainda não definido.'}</span>`;
       }
     }
-    return `<div class="card ${atual ? 'champ' : ''}"><span class="tag ${atual ? '' : pl.codigo === 'arena' ? 'verde' : pl.codigo === 'organizador' ? 'laranja' : 'roxo'}">${atual ? 'SEU PLANO' : esc(pl.nome.toUpperCase())}</span>
+    return `<div class="card ${atual ? 'champ' : ''}"><span class="tag ${atual ? '' : pl.codigo === 'arena' ? 'verde' : pl.codigo === 'organizador' ? 'laranja' : pl.codigo === 'pro' ? 'azul' : 'roxo'}">${atual ? 'SEU PLANO' : esc(pl.nome.toUpperCase())}</span>
       <h3>${esc(pl.nome)}</h3><div style="font-size:24px;font-weight:900;margin:6px 0">${pl.codigo === 'gratuito' ? 'Grátis' : brl(pl.valor_mensal)}</div>
       <div class="meta">${esc(lim)}</div><div class="spots" style="flex-wrap:wrap;gap:8px">${acao || '<span></span>'}</div></div>`;
   }

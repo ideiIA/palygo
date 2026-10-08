@@ -55,6 +55,7 @@
         <label class="suave">R$/mês <input name="valor_mensal" value="${p.valor_mensal}" style="width:90px;border:1px solid var(--border);border-radius:8px;padding:6px"></label>
         <label class="suave">Máx. participantes <input name="max_participantes" value="${p.max_participantes ?? ''}" placeholder="∞" style="width:70px;border:1px solid var(--border);border-radius:8px;padding:6px"></label>
         <label class="suave">Atividades abertas <input name="max_atividades_abertas" value="${p.max_atividades_abertas ?? ''}" placeholder="∞" style="width:70px;border:1px solid var(--border);border-radius:8px;padding:6px"></label>
+        <label class="suave"><input type="checkbox" name="pode_atividade" ${p.pode_atividade ? 'checked' : ''}> atividades</label>
         <label class="suave"><input type="checkbox" name="pode_campeonato" ${p.pode_campeonato ? 'checked' : ''}> campeonatos</label>
         <label class="suave"><input type="checkbox" name="pode_arena" ${p.pode_arena ? 'checked' : ''}> arenas</label>
         <button class="btn soft pequeno" data-salvar-plano="${p.codigo}">Salvar</button></div>`).join('');
@@ -66,11 +67,11 @@
       const linha = salvar.closest('[data-plano-cod]');
       const v = (n) => linha.querySelector(`[name=${n}]`);
       const num = (x) => (x.value.trim() === '' ? 0 : Number(x.value.replace(',', '.')));
-      try { await webApi('/admin/planos/' + salvar.dataset.salvarPlano, { metodo: 'PUT', corpo: { valor_mensal: String(num(v('valor_mensal'))), max_participantes: num(v('max_participantes')), max_atividades_abertas: num(v('max_atividades_abertas')), pode_campeonato: v('pode_campeonato').checked, pode_arena: v('pode_arena').checked } }); toast('Plano salvo.'); } catch (e) { toast(e.message); }
+      try { await webApi('/admin/planos/' + salvar.dataset.salvarPlano, { metodo: 'PUT', corpo: { valor_mensal: String(num(v('valor_mensal'))), max_participantes: num(v('max_participantes')), max_atividades_abertas: num(v('max_atividades_abertas')), pode_atividade: v('pode_atividade').checked, pode_campeonato: v('pode_campeonato').checked, pode_arena: v('pode_arena').checked } }); toast('Plano salvo.'); } catch (e) { toast(e.message); }
     }
     const conceder = ev.target.closest('[data-plano]');
     if (conceder) {
-      const plano = prompt('Plano a conceder: gratuito, organizador ou arena', 'organizador');
+      const plano = prompt('Plano a conceder: gratuito (Usuário), pro, organizador ou arena', 'pro');
       if (!plano) return;
       let ate = null;
       if (plano.trim() !== 'gratuito') { ate = prompt('Válido até (AAAA-MM-DD)', ''); if (!ate) return; }

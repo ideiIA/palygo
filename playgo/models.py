@@ -695,11 +695,12 @@ class Plano(Base):
 
     __tablename__ = "planos"
 
-    codigo: Mapped[str] = mapped_column(String(12), primary_key=True)  # gratuito | organizador | arena
+    codigo: Mapped[str] = mapped_column(String(12), primary_key=True)  # gratuito (Usuário) | pro | organizador | arena
     nome: Mapped[str] = mapped_column(String(60))
     valor_mensal: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     max_participantes: Mapped[int | None] = mapped_column(Integer)  # None = sem limite
     max_atividades_abertas: Mapped[int | None] = mapped_column(Integer)
+    pode_atividade: Mapped[bool] = mapped_column(Boolean, default=True)  # organizar atividades
     pode_campeonato: Mapped[bool] = mapped_column(Boolean, default=False)
     pode_arena: Mapped[bool] = mapped_column(Boolean, default=False)
 

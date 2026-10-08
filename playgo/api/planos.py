@@ -29,6 +29,7 @@ class RegrasIn(BaseModel):
     max_atividades_abertas: int | None = None
     pode_campeonato: bool | None = None
     pode_arena: bool | None = None
+    pode_atividade: bool | None = None
 
 
 class ConcederIn(BaseModel):
@@ -43,8 +44,8 @@ def meu_plano(u: AtualApi, s: Sessao):
 
 @router.post("/planos/teste")
 def iniciar_teste(corpo: PlanoIn, u: AtualApi, s: Sessao):
-    if corpo.plano not in ("organizador", "arena"):
-        raise ErroNegocio("Escolha o plano Organizador ou Arena.")
+    if corpo.plano not in ("pro", "organizador", "arena"):
+        raise ErroNegocio("Escolha o plano Pro, Organizador ou Arena.")
     if not planos._iniciar_teste(s, u, corpo.plano):
         raise ErroNegocio("O teste grátis deste plano já foi usado ou você já tem acesso a ele.")
     s.commit()

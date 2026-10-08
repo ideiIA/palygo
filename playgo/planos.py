@@ -1,6 +1,7 @@
 """Planos e mensalidades por perfil.
 
-  gratuito     atleta: participa de tudo de graça e cria atividades simples (limites abaixo).
+  gratuito     Usuário: vê tudo, publica e comenta no feed e participa de atividades, de graça. Não organiza atividades.
+  pro          Pro: organiza atividades (com limites de participantes e de atividades abertas).
   organizador  campeonatos e atividades sem limite.
   arena        tudo do organizador + arenas, quadras, agenda e divulgação de horários.
 
@@ -22,7 +23,7 @@ from .db import agora
 from .erros import ErroNegocio, NaoEncontrado, PlanoNecessario, SemPermissao
 from .models import Assinatura, Atividade, Pagamento, Plano, Usuario
 
-ORDEM = {"gratuito": 0, "organizador": 1, "arena": 2}
+ORDEM = {"gratuito": 0, "pro": 1, "organizador": 2, "arena": 3}
 CODIGOS = tuple(ORDEM)
 
 
@@ -36,11 +37,13 @@ class Regras:
     pode_campeonato: bool
     pode_arena: bool
     descricao: str = ""
+    pode_atividade: bool = True
 
 
 # Valores iniciais. Os preços ficam em R$ 0 até o administrador defini-los: sem preço, não há como assinar.
 DEFAULTS = {
-    "gratuito": Regras("gratuito", "Atleta", Decimal(0), 30, 5, False, False, "Participa de tudo e cria atividades simples."),
+    "gratuito": Regras("gratuito", "Usuário", Decimal(0), 30, 5, False, False, "Vê tudo, publica no feed e participa de atividades. Não organiza atividades.", False),
+    "pro": Regras("pro", "Pro", Decimal(0), 30, 5, False, False, "Organiza atividades, com limite de participantes e de atividades abertas."),
     "organizador": Regras("organizador", "Organizador", Decimal(0), None, None, True, False, "Campeonatos e atividades sem limite."),
     "arena": Regras("arena", "Arena", Decimal(0), None, None, True, True, "Arenas, quadras, agenda e divulgação de horários, mais tudo do Organizador."),
 }
@@ -51,7 +54,7 @@ def regras(s: SessaoORM, codigo: str) -> Regras:
     p = s.get(Plano, codigo)
     if p is None:
         return base
-    return Regras(codigo, p.nome or base.nome, p.valor_mensal, p.max_participantes, p.max_atividades_abertas, p.pode_campeonato, p.pode_arena, base.descricao)
+    return Regras(codigo, p.nome or base.nome, p.valor_mensal, p.max_participantes, p.max_atividades_abertas, p.pode_campeonato, p.pode_arena, base.descricao, p.pode_atividade)
 
 
 def todas(s: SessaoORM) -> list[Regras]:
@@ -62,11 +65,11 @@ def _dict(r: Regras) -> dict:
     return {
         "codigo": r.codigo, "nome": r.nome, "valor_mensal": float(r.valor_mensal), "max_participantes": r.max_participantes,
         "max_atividades_abertas": r.max_atividades_abertas, "pode_campeonato": r.pode_campeonato, "pode_arena": r.pode_arena,
-        "descricao": r.descricao, "assinavel": r.codigo != "gratuito" and r.valor_mensal > 0,
+        "descricao": r.descricao, "pode_atividade": r.pode_atividade, "assinavel": r.codigo != "gratuito" and r.valor_mensal > 0,
     }
 
 
-def salvar_regras(s: SessaoORM, por: Usuario, codigo: str, nome: str | None = None, valor_mensal: Decimal | None = None, max_participantes: int | None = ..., max_atividades_abertas: int | None = ..., pode_campeonato: bool | None = None, pode_arena: bool | None = None) -> dict:
+def salvar_regras(s: SessaoORM, por: Usuario, codigo: str, nome: str | None = None, valor_mensal: Decimal | None = None, max_participantes: int | None = ..., max_atividades_abertas: int | None = ..., pode_campeonato: bool | None = None, pode_arena: bool | None = None, pode_atividade: bool | None = None) -> dict:
     if not por.admin:
         raise SemPermissao("Só administradores definem preços e limites dos planos.")
     if codigo not in CODIGOS:
@@ -76,7 +79,7 @@ def salvar_regras(s: SessaoORM, por: Usuario, codigo: str, nome: str | None = No
     p = s.get(Plano, codigo)
     if p is None:
         base = DEFAULTS[codigo]
-        p = Plano(codigo=codigo, nome=base.nome, valor_mensal=base.valor_mensal, max_participantes=base.max_participantes, max_atividades_abertas=base.max_atividades_abertas, pode_campeonato=base.pode_campeonato, pode_arena=base.pode_arena)
+        p = Plano(codigo=codigo, nome=base.nome, valor_mensal=base.valor_mensal, max_participantes=base.max_participantes, max_atividades_abertas=base.max_atividades_abertas, pode_campeonato=base.pode_campeonato, pode_arena=base.pode_arena, pode_atividade=base.pode_atividade)
         s.add(p)
     if nome:
         p.nome = nome.strip()[:60]
@@ -90,6 +93,8 @@ def salvar_regras(s: SessaoORM, por: Usuario, codigo: str, nome: str | None = No
         p.pode_campeonato = pode_campeonato
     if pode_arena is not None:
         p.pode_arena = pode_arena
+    if pode_atividade is not None:
+        p.pode_atividade = pode_atividade
     auditoria.registrar(s, por.id, "plano_alterar", "plano", None, codigo=codigo, valor=str(p.valor_mensal))
     s.commit()
     return _dict(regras(s, codigo))
@@ -110,7 +115,14 @@ def fim_do_acesso(a: Assinatura) -> date | None:
 
 
 def situacao(s: SessaoORM, u: Usuario, hoje: date | None = None) -> dict:
-    """Em que plano a pessoa está agora. `plano` é o que vale hoje; `plano_contratado` é o que ela assinou/testa."""
+    """Em que plano a pessoa está agora. `plano` é o que vale hoje; `plano_contratado` é o que ela assinou/testa.
+    `teste_disponivel` só lista planos acima do atual e ainda não testados."""
+    sit = _situacao(s, u, hoje)
+    sit["teste_disponivel"] = [c for c in sit["teste_disponivel"] if ORDEM[c] > ORDEM[sit["plano"]]]
+    return sit
+
+
+def _situacao(s: SessaoORM, u: Usuario, hoje: date | None) -> dict:
     hoje = hoje or agora().date()
     a = assinatura_de(s, u)
     base = {"plano": "gratuito", "plano_contratado": None, "status": "gratuito", "fim": None, "dias_restantes": None, "tolerancia_ate": None, "teste_disponivel": [c for c in CODIGOS if c != "gratuito"], "assinatura_asaas": False, "cancelada": False}
@@ -222,7 +234,9 @@ def exigir(s: SessaoORM, u: Usuario, recurso: str, max_participantes: int | None
         return
     r = regras(s, situacao(s, u)["plano"])
     if recurso == "atividade":
-        if r.max_participantes is not None and max_participantes and max_participantes > r.max_participantes:
+        if not r.pode_atividade:
+            motivo, necessario = "organizar atividades", "pro"
+        elif r.max_participantes is not None and max_participantes and max_participantes > r.max_participantes:
             motivo, necessario = f"atividades com mais de {r.max_participantes} participantes", "organizador"
         elif r.max_atividades_abertas is not None and _abertas(s, u) >= r.max_atividades_abertas:
             motivo, necessario = f"mais de {r.max_atividades_abertas} atividades abertas ao mesmo tempo", "organizador"

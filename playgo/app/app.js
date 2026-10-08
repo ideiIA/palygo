@@ -790,7 +790,7 @@
   }
 
   // ---- meu plano e mensalidades
-  const NOME_PLANO = { gratuito: 'Atleta', organizador: 'Organizador', arena: 'Arena' };
+  const NOME_PLANO = { gratuito: 'Usuário', pro: 'Pro', organizador: 'Organizador', arena: 'Arena' };
   const brl = (v) => (v ? 'R$ ' + Number(v).toFixed(2).replace('.', ',') + '/mês' : 'valor a definir');
   const dataBr = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
 
@@ -805,10 +805,10 @@
         : p.status === 'cancelada' ? ['ok', `Plano ${NOME_PLANO[p.plano]} cancelado: vale até ${f}, sem renovação.`]
         : p.status === 'tolerancia' ? ['erro', `⚠️ O plano ${NOME_PLANO[p.plano]} venceu em ${f}. Tolerância até ${t}; depois, não dá para criar nem divulgar nada novo (o que já existe continua).`]
         : p.status === 'vencida' ? ['erro', `O acesso ao plano ${NOME_PLANO[p.plano_contratado]} terminou em ${f}. Criar e divulgar coisas novas exige assinar de novo.`]
-        : ['alerta', 'Você está no plano Atleta (gratuito): participa de tudo e cria atividades simples. Para campeonatos, atividades maiores ou uma arena, escolha um plano.'];
+        : ['alerta', 'Você está no plano Usuário (gratuito): vê tudo, publica no feed e participa de atividades. Para organizar atividades, campeonatos ou uma arena, escolha um plano.'];
       const cartao = (pl) => {
         const atual = p.plano_contratado === pl.codigo || (pl.codigo === 'gratuito' && p.plano === 'gratuito');
-        const lim = pl.codigo === 'gratuito' ? `Até ${pl.max_participantes || '∞'} participantes por atividade e ${pl.max_atividades_abertas || '∞'} atividades abertas ao mesmo tempo. Sem campeonatos.` : pl.codigo === 'organizador' ? 'Atividades sem limite e campeonatos.' : 'Tudo do Organizador, mais arenas, quadras, agenda e divulgação de horários.';
+        const lim = pl.codigo === 'gratuito' ? 'Ver tudo, publicar e comentar no feed e participar de atividades. Não organiza atividades.' : pl.codigo === 'pro' ? `Organiza atividades: até ${pl.max_participantes || '∞'} participantes por atividade e ${pl.max_atividades_abertas || '∞'} abertas ao mesmo tempo. Sem campeonatos.` : pl.codigo === 'organizador' ? 'Atividades sem limite e campeonatos.' : 'Tudo do Organizador, mais arenas, quadras, agenda e divulgação de horários.';
         let acao = '';
         if (pl.codigo !== 'gratuito' && p.status !== 'administrador') {
           if (p.assinatura_asaas && p.plano_contratado === pl.codigo) acao = '<button class="btn perigo bloco" data-acao="plano-cancelar">Cancelar assinatura</button>';
