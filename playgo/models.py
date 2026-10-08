@@ -684,3 +684,55 @@ class Registro(Base):
     porta: Mapped[int | None] = mapped_column(Integer)
     user_agent: Mapped[str | None] = mapped_column(String(300))
     detalhes: Mapped[dict | None] = mapped_column(JSONB)
+
+
+# ---------------------------------------------------------------- planos e mensalidades
+
+
+class Plano(Base):
+    """Preço e limites de cada plano. Linhas ausentes usam `planos.DEFAULTS`."""
+
+    __tablename__ = "planos"
+
+    codigo: Mapped[str] = mapped_column(String(12), primary_key=True)  # gratuito | organizador | arena
+    nome: Mapped[str] = mapped_column(String(60))
+    valor_mensal: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
+    max_participantes: Mapped[int | None] = mapped_column(Integer)  # None = sem limite
+    max_atividades_abertas: Mapped[int | None] = mapped_column(Integer)
+    pode_campeonato: Mapped[bool] = mapped_column(Boolean, default=False)
+    pode_arena: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Assinatura(Base):
+    """Plano pago de uma pessoa (no máximo uma). `teste` = 30 dias grátis; `ativa` = paga ou concedida; `cancelada` = não renova."""
+
+    __tablename__ = "assinaturas"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), unique=True)
+    plano: Mapped[str] = mapped_column(String(12))
+    status: Mapped[str] = mapped_column(String(10), default="teste")  # teste | ativa | cancelada
+    origem: Mapped[str] = mapped_column(String(10), default="teste")  # teste | asaas | manual
+    teste_ate: Mapped[date | None] = mapped_column(Date)
+    vigente_ate: Mapped[date | None] = mapped_column(Date)
+    testes_usados: Mapped[list[str]] = mapped_column(ARRAY(String(12)), default=list)
+    asaas_customer_id: Mapped[str | None] = mapped_column(String(40))  # o CPF/CNPJ NÃO é guardado aqui
+    asaas_subscription_id: Mapped[str | None] = mapped_column(String(40), unique=True)
+    cancelada_em: Mapped[datetime | None] = mapped_column(DateTime)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=agora)
+
+    pagamentos: Mapped[list["Pagamento"]] = relationship(cascade="all, delete-orphan", order_by="Pagamento.id")
+
+
+class Pagamento(Base):
+    __tablename__ = "pagamentos"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    assinatura_id: Mapped[int] = mapped_column(ForeignKey("assinaturas.id", ondelete="CASCADE"))
+    asaas_payment_id: Mapped[str] = mapped_column(String(40), unique=True)
+    valor: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    status: Mapped[str] = mapped_column(String(30))  # status do Asaas: PENDING, CONFIRMED, RECEIVED, OVERDUE…
+    vencimento: Mapped[date] = mapped_column(Date)
+    pago_em: Mapped[date | None] = mapped_column(Date)
+    invoice_url: Mapped[str | None] = mapped_column(Text)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=agora)

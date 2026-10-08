@@ -42,7 +42,13 @@ def listar(s: SessaoORM, por: Usuario, q: str = "", perfil: str | None = None, l
     elif perfil == "usuario":
         consulta = consulta.where(~Usuario.admin, ~Usuario.moderador)
     consulta = consulta.order_by(Usuario.admin.desc(), Usuario.moderador.desc(), Usuario.usuario).limit(limite)
-    return [_item(u) for u in s.scalars(consulta)]
+    from . import planos
+
+    saida = []
+    for u in s.scalars(consulta):
+        sit = planos.situacao(s, u)
+        saida.append(_item(u) | {"plano": sit["plano"], "plano_status": sit["status"], "plano_fim": sit["fim"].isoformat() if sit["fim"] else None})
+    return saida
 
 
 def resumo(s: SessaoORM, por: Usuario) -> dict:

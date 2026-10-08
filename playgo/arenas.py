@@ -7,7 +7,7 @@ from decimal import Decimal
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session as SessaoORM
 
-from . import notificacoes
+from . import notificacoes, planos
 from .db import agora
 from .erros import ErroNegocio, NaoEncontrado, SemPermissao
 from .geo import distancia_sql, formatar_km
@@ -72,6 +72,7 @@ def criar(
     abre: time = time(6, 0),
     fecha: time = time(23, 0),
 ) -> Arena:
+    planos.exigir(s, usuario, "arena")
     if not nome.strip():
         raise ErroNegocio("Informe o nome da arena.")
     if abre >= fecha:
@@ -89,6 +90,7 @@ def criar(
 
 def criar_quadra(s: SessaoORM, arena: Arena, usuario: Usuario, nome: str, modalidades: list[str], capacidade: int | None, valor_hora: Decimal) -> Quadra:
     exigir_gestor(arena, usuario)
+    planos.exigir(s, usuario, "arena")
     if not nome.strip():
         raise ErroNegocio("Informe o nome da quadra.")
     if valor_hora < 0:
@@ -215,6 +217,7 @@ def _publico_do_horario(s: SessaoORM, h: HorarioDivulgado) -> list[tuple[Usuario
 def divulgar(s: SessaoORM, quadra_id: int, inicio: datetime, fim: datetime, valor: Decimal | None, modalidade_id: int | None, usuario: Usuario, avisar: bool = True) -> HorarioDivulgado:
     """Transforma um horário livre em oportunidade pública e avisa os atletas próximos que jogam o esporte."""
     quadra = quadra_do_gestor(s, quadra_id, usuario)
+    planos.exigir(s, usuario, "arena")
     if fim <= inicio:
         raise ErroNegocio("O fim precisa ser depois do início.")
     if inicio < agora() - timedelta(minutes=30):
@@ -256,6 +259,7 @@ def despublicar(s: SessaoORM, horario_id: int, usuario: Usuario) -> None:
 def divulgar_ociosos(s: SessaoORM, arena: Arena, usuario: Usuario, dia: date | None = None) -> int:
     """Publica de uma vez todos os horários livres que ainda restam no dia (o botão 'Divulgar horário')."""
     exigir_gestor(arena, usuario)
+    planos.exigir(s, usuario, "arena")
     n = agora()
     dia = dia or n.date()
     abre, fecha = _janela(arena, dia)

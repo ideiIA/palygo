@@ -27,6 +27,7 @@ from .. import (
     grupos,
     modalidades,
     notificacoes,
+    planos,
     publicacoes,
     seguranca,
     termos,
@@ -34,11 +35,12 @@ from .. import (
 )
 from .. import serializadores as ser
 from ..api.mural import router as api_mural
+from ..api.planos import router as api_planos
 from ..api.v1 import router as api_v1
 from ..config import settings
 from ..db import Session, agora, criar_tabelas
 from ..deps import Atual, Opcional, PrecisaCompletar, PrecisaEntrar, Sessao
-from ..erros import ErroNegocio, NaoEncontrado, SemPermissao
+from ..erros import ErroNegocio, NaoEncontrado, PlanoNecessario, SemPermissao
 from ..models import CATEGORIAS, NIVEIS, NOME_NIVEL, PERIODOS, Usuario
 
 PASTA = Path(__file__).parent
@@ -63,6 +65,7 @@ app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
 app.mount("/app", StaticFiles(directory=PASTA.parent / "app", html=True), name="pwa")
 app.include_router(api_v1)
 app.include_router(api_mural)
+app.include_router(api_planos)
 templates = Jinja2Templates(directory=PASTA / "templates")
 
 
@@ -84,6 +87,14 @@ def _ir_para_login(request: Request, _: PrecisaEntrar):
 @app.exception_handler(PrecisaCompletar)
 def _completar_cadastro(request: Request, erro: PrecisaCompletar):
     return RedirectResponse("/cadastro/completar" if erro.pendencia == "usuario" else "/termos/aceitar", status_code=303)
+
+
+@app.exception_handler(PlanoNecessario)
+def _plano_necessario(request: Request, erro: PlanoNecessario):
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": {"codigo": "plano_necessario", "plano": erro.plano, "mensagem": str(erro)}}, status_code=402)
+    request.session["erro"] = str(erro)
+    return RedirectResponse(f"/planos?precisa={erro.plano}", status_code=303)
 
 
 @app.exception_handler(ErroNegocio)
@@ -530,6 +541,7 @@ def divulgar(quadra_id: int, request: Request, s: Sessao, usuario: Atual, inicio
 @app.post("/gestao/quadras/{quadra_id}/reservar")
 def reservar(quadra_id: int, s: Sessao, usuario: Atual, inicio: str = Form(), rotulo: str = Form(""), arena: int = Form()):
     arenas.quadra_do_gestor(s, quadra_id, usuario)
+    planos.exigir(s, usuario, "arena")
     ini = datetime.fromisoformat(inicio)
     arenas.reservar(s, quadra_id, ini, ini + timedelta(hours=1), "reserva", rotulo.strip() or "Reservada")
     s.commit()

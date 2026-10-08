@@ -42,6 +42,11 @@
       location.hash = dados.detail.pendencia === 'usuario' ? '#/completar' : '#/aceite';
       throw new Error(dados.detail.mensagem);
     }
+    if (r.status === 402 && dados.detail && dados.detail.codigo === 'plano_necessario') {
+      // O recurso faz parte de um plano pago: explica e leva a pessoa para Meu plano
+      toast(dados.detail.mensagem); setTimeout(() => { location.hash = '#/planos'; }, 900);
+      throw new Error(dados.detail.mensagem);
+    }
     if (!r.ok) throw new Error(typeof dados.detail === 'string' ? dados.detail : (dados.detail && dados.detail.mensagem) || (Array.isArray(dados.detail) ? 'Confira os campos informados.' : 'Não foi possível concluir. Confira os dados.'));
     return dados;
   }
@@ -579,7 +584,7 @@
       const mine = await api('/minhas-atividades');
       const nivelDe = (id) => (u.esportes.find((e) => e.modalidade_id === id) || {}).nivel || '';
       montar(`<div style="display:flex;gap:14px;align-items:center;margin-bottom:14px"><span class="avatar grande">${u.foto_url ? `<img src="${esc(u.foto_url)}" alt="Sua foto">` : esc(u.iniciais)}</span><div><h1>${esc(u.arroba)}</h1><p class="suave">${esc(u.nome)} · ${esc(u.email)}</p><button class="btn suave pequeno" data-acao="trocar-usuario" style="margin-top:6px">Trocar @usuario</button> <button class="btn suave pequeno" data-acao="foto" style="margin-top:6px">📷 ${u.foto_url ? 'Trocar foto' : 'Adicionar foto'}</button>${u.foto_url ? ' <button class="btn perigo pequeno" data-acao="remover-foto" style="margin-top:6px">Remover</button>' : ''}</div></div>
-        <div class="painel"><a class="item-menu" href="#/gestao"><i>▦</i>Minha Arena<span>Gestão ›</span></a><a class="item-menu" href="#/campeonatos"><i>🏆</i>Campeonatos<span>›</span></a><a class="item-menu" href="#/notificacoes"><i>🔔</i>Notificações<span>›</span></a><a class="item-menu" href="#/comunidades"><i>☺</i>Comunidades<span>›</span></a><a class="item-menu" href="#/convites"><i>✉️</i>Convites<span>›</span></a>${u.equipe_moderacao ? '<a class="item-menu" href="#/moderacao"><i>🛡</i>Moderação<span>Fila ›</span></a>' : ''}${u.admin ? '<a class="item-menu" href="#/admin"><i>⚙️</i>Administração<span>Perfis ›</span></a>' : ''}<a class="item-menu" href="#/privacidade"><i>🔒</i>Meus dados e privacidade<span>›</span></a></div>
+        <div class="painel"><a class="item-menu" href="#/gestao"><i>▦</i>Minha Arena<span>Gestão ›</span></a><a class="item-menu" href="#/campeonatos"><i>🏆</i>Campeonatos<span>›</span></a><a class="item-menu" href="#/planos"><i>💳</i>Meu plano<span>›</span></a><a class="item-menu" href="#/notificacoes"><i>🔔</i>Notificações<span>›</span></a><a class="item-menu" href="#/comunidades"><i>☺</i>Comunidades<span>›</span></a><a class="item-menu" href="#/convites"><i>✉️</i>Convites<span>›</span></a>${u.equipe_moderacao ? '<a class="item-menu" href="#/moderacao"><i>🛡</i>Moderação<span>Fila ›</span></a>' : ''}${u.admin ? '<a class="item-menu" href="#/admin"><i>⚙️</i>Administração<span>Perfis ›</span></a>' : ''}<a class="item-menu" href="#/privacidade"><i>🔒</i>Meus dados e privacidade<span>›</span></a></div>
         ${mine.proximas.length ? secao('Meus próximos jogos') + lista(mine.proximas, (a) => cardAtv(a)) : ''}
         <form id="f-perfil" style="margin-top:18px"><div class="painel"><h3 style="margin-bottom:12px">Esportes que pratico</h3>
           ${estado.mods.map((m) => `<div class="pessoa"><span style="font-size:22px">${esc(m.icone)}</span><b>${esc(m.nome)}</b><span class="acoes"><select name="esporte_${m.id}" style="border:1px solid var(--border);border-radius:10px;padding:7px"><option value="">—</option>${Object.entries(NIVEIS).map(([k, v]) => `<option value="${k}" ${nivelDe(m.id) === k ? 'selected' : ''}>${v}</option>`).join('')}</select></span></div>`).join('')}</div>
@@ -781,6 +786,42 @@
     } catch (e) { erroTela(e); }
   }
 
+  // ---- meu plano e mensalidades
+  const NOME_PLANO = { gratuito: 'Atleta', organizador: 'Organizador', arena: 'Arena' };
+  const brl = (v) => (v ? 'R$ ' + Number(v).toFixed(2).replace('.', ',') + '/mês' : 'valor a definir');
+  const dataBr = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
+
+  async function vPlanos() {
+    carregando();
+    try {
+      const p = await api('/planos');
+      const f = dataBr(p.fim), t = dataBr(p.tolerancia_ate);
+      const faixa = p.status === 'administrador' ? ['ok', 'Você é administrador: acesso completo, sem cobrança.']
+        : p.status === 'teste' ? ['ok', `🎁 Teste grátis do plano ${NOME_PLANO[p.plano]} até ${f} (${p.dias_restantes} dia${p.dias_restantes !== 1 ? 's' : ''}).`]
+        : p.status === 'ativa' ? ['ok', `✅ Plano ${NOME_PLANO[p.plano]} ativo até ${f}.`]
+        : p.status === 'cancelada' ? ['ok', `Plano ${NOME_PLANO[p.plano]} cancelado: vale até ${f}, sem renovação.`]
+        : p.status === 'tolerancia' ? ['erro', `⚠️ O plano ${NOME_PLANO[p.plano]} venceu em ${f}. Tolerância até ${t}; depois, não dá para criar nem divulgar nada novo (o que já existe continua).`]
+        : p.status === 'vencida' ? ['erro', `O acesso ao plano ${NOME_PLANO[p.plano_contratado]} terminou em ${f}. Criar e divulgar coisas novas exige assinar de novo.`]
+        : ['alerta', 'Você está no plano Atleta (gratuito): participa de tudo e cria atividades simples. Para campeonatos, atividades maiores ou uma arena, escolha um plano.'];
+      const cartao = (pl) => {
+        const atual = p.plano_contratado === pl.codigo || (pl.codigo === 'gratuito' && p.plano === 'gratuito');
+        const lim = pl.codigo === 'gratuito' ? `Até ${pl.max_participantes || '∞'} participantes por atividade e ${pl.max_atividades_abertas || '∞'} atividades abertas ao mesmo tempo. Sem campeonatos.` : pl.codigo === 'organizador' ? 'Atividades sem limite e campeonatos.' : 'Tudo do Organizador, mais arenas, quadras, agenda e divulgação de horários.';
+        let acao = '';
+        if (pl.codigo !== 'gratuito' && p.status !== 'administrador') {
+          if (p.assinatura_asaas && p.plano_contratado === pl.codigo) acao = '<button class="btn perigo bloco" data-acao="plano-cancelar">Cancelar assinatura</button>';
+          else {
+            if (p.teste_disponivel.includes(pl.codigo)) acao += `<button class="btn suave bloco" data-acao="plano-teste" data-p="${pl.codigo}">🎁 Começar teste de ${p.teste_dias} dias</button>`;
+            acao += pl.assinavel && p.cobranca_ativa ? `<button class="btn roxo bloco" style="margin-top:8px" data-acao="plano-assinar" data-p="${pl.codigo}">Assinar</button>` : `<p class="suave" style="margin-top:8px">${pl.assinavel ? 'Cobrança ainda não ativada.' : 'Valor ainda não definido.'}</p>`;
+          }
+        }
+        return `<div class="card ${atual ? 'champ' : ''}"><span class="tag ${atual ? '' : pl.codigo === 'arena' ? 'verde' : pl.codigo === 'organizador' ? 'laranja' : ''}">${atual ? 'SEU PLANO' : esc(pl.nome.toUpperCase())}</span><h3>${esc(pl.nome)}</h3>
+          <div style="font-size:22px;font-weight:900;margin:4px 0">${pl.codigo === 'gratuito' ? 'Grátis' : brl(pl.valor_mensal)}</div><div class="meta">${esc(lim)}</div><div style="margin-top:12px">${acao}</div></div>`;
+      };
+      montar(`<h1>💳 Meu plano</h1><p class="aviso ${faixa[0]}" style="margin-top:12px">${esc(faixa[1])}</p><div class="lista">${p.planos.map(cartao).join('')}</div>
+        <p class="suave" style="margin-top:14px">Participar é sempre gratuito. A cobrança é mensal pelo Asaas (Pix, boleto ou cartão); você cancela quando quiser e o acesso segue até o fim do período pago. <a href="#/documento/termos">Termos de Uso</a></p>`);
+    } catch (e) { erroTela(e); }
+  }
+
   // ---- administração de perfis (administrador)
   const PERFIS = { usuario: 'Usuário', moderador: 'Moderador geral', admin: 'Administrador' };
   async function vAdmin(q = '', perfil = '') {
@@ -865,6 +906,15 @@
 
   const acoesNovas = {
     'admin-filtro'(el) { vAdmin('', el.dataset.v); },
+    async 'plano-teste'(el) { try { await post('/planos/teste', { plano: el.dataset.p }); toast('Teste grátis começou!'); vPlanos(); } catch (e) { toast(e.message); } },
+    async 'plano-cancelar'() { if (!confirm('Cancelar a assinatura? O acesso segue até o fim do período já pago.')) return; try { await post('/planos/cancelar'); toast('Assinatura cancelada.'); vPlanos(); } catch (e) { toast(e.message); } },
+    'plano-assinar'(el) {
+      folha(`<h3>Assinar plano ${esc(NOME_PLANO[el.dataset.p])}</h3><p class="suave" style="margin-bottom:10px">Informe seu CPF ou CNPJ para emitir a cobrança. Ele vai direto ao Asaas e não é guardado pelo PlayGo.</p><form id="f-assinar"><div class="campo"><input name="cpf_cnpj" inputmode="numeric" required placeholder="CPF ou CNPJ (só números)"></div><button class="btn roxo bloco">Ir para o pagamento</button></form>`);
+      $('#f-assinar').onsubmit = async (ev) => {
+        ev.preventDefault();
+        try { const r = await post('/planos/assinar', { plano: el.dataset.p, cpf_cnpj: dadosForm(ev.target).cpf_cnpj }); fecharFolha(); if (r.link_pagamento) window.open(r.link_pagamento, '_blank', 'noopener'); else toast('Assinatura criada. A cobrança chega no seu e-mail.'); vPlanos(); } catch (e) { toast(e.message); }
+      };
+    },
     'escolher-arroba'(el) { if (estado.aoEscolherArroba) Promise.resolve(estado.aoEscolherArroba(el.dataset.u)).catch((e) => toast(e.message)); },
     'convidar-arroba'(el) {
       const { escopo, id } = el.dataset;
@@ -1048,6 +1098,7 @@
       case 'perfil': return vPerfil();
       case 'notificacoes': return vNotificacoes();
       case 'feed': return vFeed(parametros);
+      case 'planos': return vPlanos();
       case 'comunidades': return vComunidades();
       case 'comunidade': return vComunidade(arg);
       case 'nova-comunidade': return vNovaComunidade();

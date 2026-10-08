@@ -87,6 +87,25 @@ select cron.schedule('playgo-ciclo', '*/10 * * * *', $$
 $$);
 ```
 
+## Planos e mensalidades (Asaas)
+
+Perfis: **Atleta** (grátis: participa de tudo e cria atividades simples), **Organizador** (campeonatos e atividades sem limite) e **Arena**
+(tudo do Organizador + arenas, quadras, agenda e divulgação de horários). Teste grátis de 30 dias (começa sozinho na primeira vez que a pessoa
+precisa do recurso, uma vez por plano) e 7 dias de tolerância; depois, não cria nem divulga nada novo (o que existe continua). O administrador não paga.
+
+1. **Preços e limites**: entre como administrador em **Administração → Planos e mensalidades** e defina o valor mensal de Organizador e Arena
+   (enquanto for R$ 0, o plano não pode ser assinado) e, se quiser, os limites do plano gratuito.
+2. **Asaas**: crie a conta em https://www.asaas.com (teste antes no sandbox: https://sandbox.asaas.com) e gere a chave de API (Integrações → Chave de API).
+3. No `.env.producao` / variáveis do Vercel: `PLAYGO_ASAAS_API_KEY`, `PLAYGO_ASAAS_AMBIENTE` (`sandbox` ou `producao`) e `PLAYGO_ASAAS_WEBHOOK_TOKEN` (um texto longo e secreto que você inventa).
+4. No Asaas, **Integrações → Webhooks**: URL `https://SEU-APP.vercel.app/api/v1/cobranca/asaas`, o **mesmo token** acima, versão v3, e marque os eventos de **Cobranças**
+   (criada, confirmada, recebida, vencida, estornada, removida) e de **Assinaturas** (removida, inativada).
+5. Sem a chave do Asaas, tudo funciona e o administrador libera planos à mão (**Conceder plano**, na lista de usuários).
+
+O CPF/CNPJ é pedido só ao assinar, vai direto ao Asaas e **não é guardado** pelo PlayGo. **A integração foi testada apenas com transporte simulado**:
+faça uma assinatura de teste no sandbox (Pix/cartão de teste) antes de cobrar de verdade.
+
+Depois de atualizar o código, rode `python -m playgo supabase` (com `PLAYGO_ENV_FILE=.env.producao`) para criar as tabelas novas com RLS.
+
 ## Pendências conhecidas
 
 - **Vídeos acima de 4 MB**: exigem upload direto do navegador para o Storage (URL assinada de envio). É a próxima etapa técnica.

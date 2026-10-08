@@ -7,7 +7,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session as SessaoORM
 
-from . import arenas, auditoria, convites, match, notificacoes
+from . import arenas, auditoria, convites, match, notificacoes, planos
 from .db import agora
 from .erros import ErroNegocio, NaoEncontrado, SemPermissao
 from .models import (
@@ -93,6 +93,7 @@ def criar(s: SessaoORM, organizador: Usuario, d: NovaAtividade) -> Atividade:
     visibilidade = "autorizados" if (d.exige_aprovacao and d.visibilidade == "publica") else d.visibilidade
     if d.valor < 0:
         raise ErroNegocio("O valor não pode ser negativo.")
+    planos.exigir(s, organizador, "atividade", max_participantes=d.max_participantes)  # atividade simples é grátis; as grandes pedem plano
     if d.duracao_min < 15:
         raise ErroNegocio("A duração mínima é de 15 minutos.")
     if d.idade_min is not None and d.idade_max is not None and d.idade_min > d.idade_max:

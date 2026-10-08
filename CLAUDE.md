@@ -32,6 +32,8 @@ ORM alternativo ou framework de front sem pedido explícito.
   (ler/postar/moderar) vive em `escopos.py` — não replique `if` de permissão em rota ou template.
 - **Perfis**: `Usuario.admin` e `Usuario.moderador`; use `u.equipe_moderacao` (admin ou moderador geral) para permissões de moderação e `u.admin` só para
   gerir usuários/perfis. Quem oculta fica em `oculta_por_papel` (`admin` > `moderacao` > `moderador`) e só o mesmo nível ou acima restaura.
+- **Planos**: todo recurso pago passa por `planos.exigir(s, usuario, "atividade"|"campeonato"|"arena")` dentro do serviço (nunca só na tela); `PlanoNecessario` vira 402 na API e leva a `/planos`.
+  Participar nunca é bloqueado. O CPF/CNPJ nunca é gravado (`cobranca.assinar` só repassa ao Asaas).
 - **Auditoria** (`auditoria.registrar`): toda ação de usuário que mude estado grava um `Registro` (a tabela é só de inserção, com gatilho no
   Postgres). Ação nova de serviço = uma linha de `registrar`. Nunca UPDATE/DELETE em `registros`; a purga é `privacidade.purgar`.
 - **Pessoas aparecem pelo `@usuario`** (nunca nome real/e-mail) em murais, comunidades, buscas e convites.

@@ -8,7 +8,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session as SessaoORM
 
-from . import notificacoes
+from . import notificacoes, planos
 from .db import agora
 from .erros import ErroNegocio, NaoEncontrado, SemPermissao
 from .geo import distancia_sql, formatar_km
@@ -83,6 +83,7 @@ def criar(s: SessaoORM, usuario: Usuario, d: NovoCampeonato) -> Campeonato:
         raise ErroNegocio("Dê um nome ao campeonato.")
     if d.max_equipes < 2:
         raise ErroNegocio("Um campeonato precisa de pelo menos 2 equipes.")
+    planos.exigir(s, usuario, "campeonato")
     if d.atletas_por_equipe < 1:
         raise ErroNegocio("Informe quantos atletas formam uma equipe.")
     if d.inscricao_ate > d.data_inicio:

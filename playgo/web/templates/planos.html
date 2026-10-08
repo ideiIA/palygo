@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block titulo %}Meu plano — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>💳 Meu plano</h2></div>
+<div id="situacao"></div>
+<div class="grid" id="cards" style="margin-top:18px"></div>
+<p class="suave" style="margin-top:18px">Participar de atividades, grupos, comunidades e campeonatos é <b>sempre gratuito</b>. A cobrança é mensal e recorrente pelo Asaas (Pix, boleto ou cartão); você cancela quando quiser e o acesso segue até o fim do período pago. Veja os <a href="/termos">Termos de Uso</a>.</p>
+<script>
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const NOME = { gratuito: 'Atleta', organizador: 'Organizador', arena: 'Arena' };
+  const brl = (v) => (v ? 'R$ ' + Number(v).toFixed(2).replace('.', ',') + '/mês' : 'valor a definir');
+  const fmt = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
+  let P = null;
+
+  function faixa(p) {
+    const f = fmt(p.fim), t = fmt(p.tolerancia_ate);
+    if (p.status === 'administrador') return ['ok', 'Você é administrador: acesso completo, sem cobrança.'];
+    if (p.status === 'teste') return ['ok', `🎁 Teste grátis do plano <b>${NOME[p.plano]}</b> até <b>${f}</b> (${p.dias_restantes} dia${p.dias_restantes !== 1 ? 's' : ''}).`];
+    if (p.status === 'ativa') return ['ok', `✅ Plano <b>${NOME[p.plano]}</b> ativo até <b>${f}</b>.`];
+    if (p.status === 'cancelada') return ['ok', `Plano <b>${NOME[p.plano]}</b> cancelado: segue valendo até <b>${f}</b>, sem renovação.`];
+    if (p.status === 'tolerancia') return ['erro', `⚠️ O plano <b>${NOME[p.plano]}</b> venceu em ${f}. Você tem até <b>${t}</b> de tolerância; depois, não dá mais para criar nem divulgar nada novo (o que já existe continua).`];
+    if (p.status === 'vencida') return ['erro', `O acesso ao plano <b>${NOME[p.plano_contratado]}</b> terminou em ${f}. Atividades e dados continuam, mas criar e divulgar coisas novas exige assinar de novo.`];
+    return ['', 'Você está no plano <b>Atleta</b> (gratuito). Crie atividades simples à vontade; para campeonatos, atividades maiores ou uma arena, escolha um plano abaixo.'];
+  }
+
+  function cartao(pl) {
+    const atual = P.plano_contratado === pl.codigo || (pl.codigo === 'gratuito' && P.plano === 'gratuito');
+    const lim = pl.codigo === 'gratuito'
+      ? `Até ${pl.max_participantes || '∞'} participantes por atividade e ${pl.max_atividades_abertas || '∞'} atividades abertas ao mesmo tempo. Sem campeonatos.`
+      : pl.codigo === 'organizador' ? 'Atividades sem limite e campeonatos.' : 'Tudo do Organizador, mais arenas, quadras, agenda e divulgação de horários.';
+    const podeTeste = P.teste_disponivel.includes(pl.codigo) && P.status !== 'administrador';
+    let acao = '';
+    if (pl.codigo !== 'gratuito' && P.status !== 'administrador') {
+      if (P.assinatura_asaas && P.plano_contratado === pl.codigo) acao = `<button class="btn perigo" data-a="cancelar">Cancelar assinatura</button>`;
+      else {
+        if (podeTeste) acao += `<button class="btn soft" data-a="teste" data-p="${pl.codigo}">🎁 Começar teste de ${P.teste_dias} dias</button> `;
+        acao += pl.assinavel && P.cobranca_ativa ? `<button class="btn purple" data-a="assinar" data-p="${pl.codigo}">Assinar</button>` : `<span class="suave">${pl.assinavel ? 'Cobrança ainda não ativada.' : 'Valor ainda não definido.'}</span>`;
+      }
+    }
+    return `<div class="card ${atual ? 'champ' : ''}"><span class="tag ${atual ? '' : pl.codigo === 'arena' ? 'verde' : pl.codigo === 'organizador' ? 'laranja' : 'roxo'}">${atual ? 'SEU PLANO' : esc(pl.nome.toUpperCase())}</span>
+      <h3>${esc(pl.nome)}</h3><div style="font-size:24px;font-weight:900;margin:6px 0">${pl.codigo === 'gratuito' ? 'Grátis' : brl(pl.valor_mensal)}</div>
+      <div class="meta">${esc(lim)}</div><div class="spots" style="flex-wrap:wrap;gap:8px">${acao || '<span></span>'}</div></div>`;
+  }
+
+  function desenhar() {
+    const [cls, texto] = faixa(P);
+    document.getElementById('situacao').innerHTML = `<p class="aviso ${cls}">${texto}</p>`;
+    document.getElementById('cards').innerHTML = P.planos.map(cartao).join('');
+  }
+
+  async function carregar() { P = await webApi('/planos'); desenhar(); }
+
+  document.addEventListener('click', async (ev) => {
+    const b = ev.target.closest('[data-a]');
+    if (!b) return;
+    try {
+      if (b.dataset.a === 'teste') { P = await webApi('/planos/teste', { metodo: 'POST', corpo: { plano: b.dataset.p } }); toast('Teste grátis começou!'); desenhar(); }
+      else if (b.dataset.a === 'cancelar') { if (!confirm('Cancelar a assinatura? O acesso segue até o fim do período já pago.')) return; P = await webApi('/planos/cancelar', { metodo: 'POST', corpo: {} }); toast('Assinatura cancelada.'); desenhar(); }
+      else if (b.dataset.a === 'assinar') {
+        const d = await Mural.dialogo({ titulo: 'Assinar plano ' + NOME[b.dataset.p], texto: 'Informe seu CPF ou CNPJ para emitir a cobrança. Ele vai direto ao Asaas e não é guardado pelo PlayGo.', placeholder: 'CPF ou CNPJ (só números)', confirmar: 'Ir para o pagamento' });
+        if (!d) return;
+        const r = await webApi('/planos/assinar', { metodo: 'POST', corpo: { plano: b.dataset.p, cpf_cnpj: d.detalhe } });
+        if (r.link_pagamento) window.open(r.link_pagamento, '_blank', 'noopener'); else toast('Assinatura criada. A cobrança chega no seu e-mail.');
+        carregar();
+      }
+    } catch (e) { toast(e.message); }
+  });
+  window.addEventListener('load', () => carregar().catch((e) => toast(e.message)));
+</script>
+{% endblock %}

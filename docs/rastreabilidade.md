@@ -57,4 +57,5 @@ Fonte: `PlayGO.docx`. Situação: ✅ feito · 🟡 parcial · ⏭ fase posterio
 | Termo de uso/privacidade, aceite versionado | ✅ (minuta; revisar com jurídico) | `termos.py`, portão em `deps.py` |
 | LGPD: consentimento de localização, cópia dos dados, exclusão de conta, purga por prazo | ✅ | `contas.py`, `privacidade.py`, `/privacidade` |
 | Perfis: administrador promove outros administradores e moderadores gerais | ✅ | `administracao.py`, `/administracao`, `#/admin` no app |
+| Mensalidades por perfil (atleta grátis; organizador e arena pagos), teste 30 dias + 7 de tolerância, Asaas | ✅ (Asaas só simulado em teste) | `planos.py`, `cobranca.py`, `/planos`, Administração → Planos |
 | Chat de grupo e textos de organizador moderados por IA | ⏭ | ainda não passam pela moderação |

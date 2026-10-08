@@ -8,3 +8,11 @@ class NaoEncontrado(ErroNegocio):
 
 class SemPermissao(ErroNegocio):
     pass
+
+
+class PlanoNecessario(ErroNegocio):
+    """O recurso pedido faz parte de um plano pago. A tela leva a pessoa a Meu plano (HTTP 402 na API)."""
+
+    def __init__(self, plano: str, mensagem: str) -> None:
+        super().__init__(mensagem)
+        self.plano = plano

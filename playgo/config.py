@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     supabase_bucket: str = "playgo-midia"
     cron_secret: str = ""  # protege /api/v1/cron/ciclo (no Vercel: variável CRON_SECRET)
 
+    # Planos e cobrança (Asaas). Sem chave, o app funciona e o admin libera planos à mão.
+    teste_dias: int = 30
+    tolerancia_dias: int = 7
+    asaas_api_key: str = ""
+    asaas_ambiente: str = "sandbox"  # sandbox | producao
+    asaas_webhook_token: str = ""  # o mesmo token cadastrado no webhook do Asaas
+
     # Moderação por IA. Provedor: "claude" ou "gemini"; em branco = o que tiver chave preenchida.
     ia_provedor: str = ""
     anthropic_api_key: str = ""

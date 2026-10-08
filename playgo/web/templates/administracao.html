@@ -12,6 +12,11 @@
   </div>
   <p class="suave" style="margin-top:10px">Ninguém — nem administrador — edita o texto de outra pessoa. Toda mudança de perfil fica registrada na trilha de auditoria e a pessoa é avisada.</p>
 </div>
+<div class="panel" style="margin-bottom:18px">
+  <h2>💳 Planos e mensalidades</h2>
+  <p class="suave" style="margin:0 0 10px">Defina preço e limites. Plano com valor R$ 0 não pode ser assinado. Campos de limite em branco = sem limite.</p>
+  <div id="planos-admin" class="pessoas"></div>
+</div>
 <form class="filtros" id="filtros">
   <div class="campo"><label>Buscar</label><input name="q" placeholder="@usuario, nome ou e-mail"></div>
   <div class="campo"><label>Perfil</label><select name="perfil"><option value="">Todos</option><option value="admin">Administradores</option><option value="moderador">Moderadores gerais</option><option value="usuario">Usuários</option></select></div>
@@ -29,6 +34,8 @@
       document.getElementById('resumo').innerHTML = `<div class="stat"><b>${r.resumo.administradores}</b><span>Administradores</span></div><div class="stat"><b>${r.resumo.moderadores}</b><span>Moderadores gerais</span></div><div class="stat"><b>${r.resumo.usuarios}</b><span>Usuários ativos</span></div>`;
       document.getElementById('lista').innerHTML = r.itens.map((i) => `<div class="pessoa" style="flex-wrap:wrap"><span class="avatar pequeno">${i.foto_url ? `<img src="${esc(i.foto_url)}" alt="">` : esc(i.iniciais)}</span>
         <div><b>${esc(i.arroba)}</b>${i.id === PLAYGO.eu.id ? ' <span class="tag roxo">você</span>' : ''}<div class="suave">${esc(i.nome)} · ${esc(i.email)}</div></div>
+        <span class="suave">Plano: <b>${esc(i.plano)}</b>${i.plano_fim ? ' até ' + esc(i.plano_fim.split('-').reverse().join('/')) : ''} (${esc(i.plano_status)})</span>
+        <button class="link-botao" data-plano="${i.id}">Conceder plano</button>
         <span class="acoes"><select data-id="${i.id}" style="border:1px solid var(--border);border-radius:10px;padding:8px">${Object.entries(PERFIS).map(([k, n]) => `<option value="${k}" ${i.perfil === k ? 'selected' : ''}>${n}</option>`).join('')}</select></span></div>`).join('') || '<p class="suave">Ninguém encontrado.</p>';
     } catch (e) { document.getElementById('lista').innerHTML = `<p class="vazio">${esc(e.message)}</p>`; }
   }
@@ -40,6 +47,36 @@
     try { await webApi('/admin/usuarios/' + sel.dataset.id + '/perfil', { metodo: 'POST', corpo: { perfil: sel.value } }); toast('Perfil atualizado.'); } catch (e) { toast(e.message); }
     carregar();
   });
-  window.addEventListener('load', carregar);
+  async function carregarPlanos() {
+    try {
+      const r = await webApi('/admin/planos');
+      document.getElementById('planos-admin').innerHTML = r.map((p) => `<div class="pessoa" style="flex-wrap:wrap;gap:8px" data-plano-cod="${p.codigo}">
+        <b style="min-width:110px">${esc(p.nome)}</b>
+        <label class="suave">R$/mês <input name="valor_mensal" value="${p.valor_mensal}" style="width:90px;border:1px solid var(--border);border-radius:8px;padding:6px"></label>
+        <label class="suave">Máx. participantes <input name="max_participantes" value="${p.max_participantes ?? ''}" placeholder="∞" style="width:70px;border:1px solid var(--border);border-radius:8px;padding:6px"></label>
+        <label class="suave">Atividades abertas <input name="max_atividades_abertas" value="${p.max_atividades_abertas ?? ''}" placeholder="∞" style="width:70px;border:1px solid var(--border);border-radius:8px;padding:6px"></label>
+        <label class="suave"><input type="checkbox" name="pode_campeonato" ${p.pode_campeonato ? 'checked' : ''}> campeonatos</label>
+        <label class="suave"><input type="checkbox" name="pode_arena" ${p.pode_arena ? 'checked' : ''}> arenas</label>
+        <button class="btn soft pequeno" data-salvar-plano="${p.codigo}">Salvar</button></div>`).join('');
+    } catch (e) { document.getElementById('planos-admin').innerHTML = `<p class="vazio">${esc(e.message)}</p>`; }
+  }
+  document.addEventListener('click', async (ev) => {
+    const salvar = ev.target.closest('[data-salvar-plano]');
+    if (salvar) {
+      const linha = salvar.closest('[data-plano-cod]');
+      const v = (n) => linha.querySelector(`[name=${n}]`);
+      const num = (x) => (x.value.trim() === '' ? 0 : Number(x.value.replace(',', '.')));
+      try { await webApi('/admin/planos/' + salvar.dataset.salvarPlano, { metodo: 'PUT', corpo: { valor_mensal: String(num(v('valor_mensal'))), max_participantes: num(v('max_participantes')), max_atividades_abertas: num(v('max_atividades_abertas')), pode_campeonato: v('pode_campeonato').checked, pode_arena: v('pode_arena').checked } }); toast('Plano salvo.'); } catch (e) { toast(e.message); }
+    }
+    const conceder = ev.target.closest('[data-plano]');
+    if (conceder) {
+      const plano = prompt('Plano a conceder: gratuito, organizador ou arena', 'organizador');
+      if (!plano) return;
+      let ate = null;
+      if (plano.trim() !== 'gratuito') { ate = prompt('Válido até (AAAA-MM-DD)', ''); if (!ate) return; }
+      try { await webApi('/admin/usuarios/' + conceder.dataset.plano + '/plano', { metodo: 'POST', corpo: { plano: plano.trim(), ate } }); toast('Plano atualizado.'); carregar(); } catch (e) { toast(e.message); }
+    }
+  });
+  window.addEventListener('load', () => { carregar(); carregarPlanos(); });
 </script>
 {% endblock %}

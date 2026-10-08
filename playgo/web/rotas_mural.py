@@ -84,6 +84,11 @@ def tela_administracao(request: Request, s: Sessao, usuario: Atual):
     return pagina(request, s, usuario, "administracao.html", "administracao")
 
 
+@app.get("/planos")
+def tela_planos(request: Request, s: Sessao, usuario: Atual):
+    return pagina(request, s, usuario, "planos.html", "planos")
+
+
 # ---------------------------------------------------------------- comunidades
 
 

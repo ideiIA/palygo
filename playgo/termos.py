@@ -5,7 +5,7 @@ CDC; **precisa de revisão jurídica antes de ir para produção** (ver docs/lgp
 
 from .config import settings
 
-VERSAO = "2026-10-08"
+VERSAO = "2026-10-09"
 
 DECLARACOES = {
     "termos": "Li e aceito os Termos de Uso e a Política de Privacidade, inclusive as regras de publicação e de moderação.",
@@ -40,6 +40,11 @@ def termos_de_uso() -> list[dict]:
             "Você pode editar suas publicações e comentários. Toda edição fica sinalizada com “editado em” e a data e hora, e as versões anteriores são guardadas.",
             "Você pode excluir uma publicação ou comentário somente na primeira hora após postar. Depois disso, ela só pode ser ocultada por um moderador ou administrador. Mesmo excluído ou ocultado, o conteúdo é mantido de forma restrita pelo prazo legal descrito na Política de Privacidade.",
             "Administradores não editam publicações de outras pessoas; apenas ocultam, aprovam ou rejeitam.",
+        ]},
+        {"titulo": "5-A. Planos e mensalidades", "paragrafos": [
+            "Participar de atividades, grupos, comunidades e campeonatos é gratuito. Criar atividades simples também é gratuito, dentro dos limites informados em Meu plano. Atividades maiores e campeonatos exigem o plano Organizador; arenas, quadras, agenda e divulgação de horários exigem o plano Arena.",
+            f"Quem precisa de um plano ganha {settings.teste_dias} dias de teste grátis, uma vez por plano. Depois do teste ou de um período pago, há {settings.tolerancia_dias} dias de tolerância; passado esse prazo, não é possível criar nem divulgar nada novo, mas o que já existe continua funcionando e seus dados são preservados.",
+            "A cobrança é mensal e recorrente, processada pelo Asaas (Pix, boleto ou cartão). Você pode cancelar a qualquer momento em Meu plano; o acesso segue até o fim do período já pago. Os valores podem mudar, com aviso prévio. Cobranças pagas não são reembolsadas proporcionalmente, salvo nos casos previstos em lei (inclusive o direito de arrependimento do Código de Defesa do Consumidor em até 7 dias da contratação).",
         ]},
         {"titulo": "6. Registros e guarda de dados", "paragrafos": [
             "Para cumprir a lei e permitir a defesa de direitos, guardamos registros das suas interações (data e hora, endereço IP e porta de origem, ações realizadas, publicações, edições, ocultações e exclusões). Esses registros podem ser fornecidos a autoridades mediante ordem judicial ou requisição legal.",
@@ -77,6 +82,7 @@ def politica_de_privacidade() -> list[dict]:
         ]},
         {"titulo": "4. Com quem compartilhamos", "paragrafos": [
             "Provedores de inteligência artificial contratados para moderação (Anthropic e/ou Google, conforme configuração): recebem o texto e as imagens/vídeos enviados em publicações e comentários apenas para análise de conteúdo ofensivo, sem seu nome ou e-mail. Isso pode envolver transferência internacional de dados (LGPD, art. 33).",
+            "Asaas (processador de pagamentos): recebe nome, e-mail e CPF/CNPJ informados por você ao assinar um plano, apenas para emitir e cobrar a mensalidade. O PlayGo não guarda seu CPF/CNPJ nem dados de cartão.",
             "Provedores de hospedagem e infraestrutura, e autoridades públicas mediante ordem judicial ou obrigação legal.",
             "Não vendemos seus dados.",
         ]},

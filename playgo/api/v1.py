@@ -20,6 +20,7 @@ from .. import (
     midia,
     modalidades,
     notificacoes,
+    planos,
     convites,
     seguranca,
     termos,
@@ -536,6 +537,7 @@ def divulgar_ociosos(arena_id: int, u: AtualApi, s: Sessao):
 @router.post("/gestao/quadras/{quadra_id}/reservas", status_code=201)
 def reservar(quadra_id: int, corpo: ReservaIn, u: AtualApi, s: Sessao):
     arenas.quadra_do_gestor(s, quadra_id, u)
+    planos.exigir(s, u, "arena")
     if corpo.tipo not in ("reserva", "bloqueio"):
         raise ErroNegocio("Tipo de reserva inválido.")
     r = arenas.reservar(s, quadra_id, corpo.inicio, corpo.fim, corpo.tipo, corpo.rotulo)
