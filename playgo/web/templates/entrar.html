@@ -22,6 +22,10 @@
     <label>Nome de usuário <input name="usuario" value="{{ usuario or '' }}" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_.@]{3,21}" placeholder="ex.: carlos.cg" autocomplete="username"></label>
     <p class="suave" style="margin:-6px 0 0">É o que aparece nas suas publicações e como as pessoas te encontram para convites.</p>
     {% endif %}
+    {% if google_ativo() %}
+    <a class="btn soft" href="/auth/google/iniciar" style="text-align:center;display:block">Continuar com Google</a>
+    <p class="suave" style="margin:0;text-align:center">ou {{ 'crie a conta' if modo == 'cadastro' else 'use seu e-mail' }}</p>
+    {% endif %}
     <label>E-mail <input type="email" name="email" value="{{ email or '' }}" required autocomplete="{{ 'email' if modo == 'cadastro' else 'username' }}" {{ 'autofocus' if modo != 'cadastro' }}></label>
     <label>Senha <input type="password" name="senha" required {% if modo == 'cadastro' %}minlength="8" autocomplete="new-password"{% else %}autocomplete="current-password"{% endif %}></label>
     {% if modo == 'cadastro' %}

@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     supabase_bucket: str = "playgo-midia"
     cron_secret: str = ""  # protege /api/v1/cron/ciclo (no Vercel: variável CRON_SECRET)
 
+    # Login com Google (OAuth 2.0). Sem client id/secret o botão não aparece. url_publica só se o endereço detectado estiver errado.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    url_publica: str = ""  # ex.: https://palygo.vercel.app
+
     # Planos e cobrança (Asaas). Sem chave, o app funciona e o admin libera planos à mão.
     teste_dias: int = 30
     tolerancia_dias: int = 7

@@ -178,12 +178,16 @@
     document.body.classList.add('sem-menu');
     $('#topo').hidden = true; $('#abas').hidden = true;
     const T = cad ? await fetch(API + '/termos').then((r) => r.json()).catch(() => null) : null;
+    const prov = await fetch(API + '/auth/provedores').then((r) => r.json()).catch(() => ({}));
+    const falhouGoogle = /erro=google/.test(location.hash);
+    const google = prov.google ? `<a class="btn suave bloco" href="/auth/google/iniciar?destino=app" style="margin-bottom:10px">Continuar com Google</a><p class="suave" style="text-align:center;margin:0 0 12px">ou ${cad ? 'crie a conta' : 'use seu e-mail'}</p>` : '';
     const dec = (T && T.declaracoes) || { maior_idade: 'Declaro ter 18 anos ou mais.', localizacao: 'Autorizo guardar a localização do meu perfil (opcional).' };
     montar(`<div class="entrada"><form class="cartao" id="f-entrar">
       <span class="marca">Play<span>Go</span></span>
       <h1>${cad ? 'Crie sua conta' : 'Entrar'}</h1>
       <p class="suave" style="margin:6px 0 16px">Encontre onde jogar. Encontre com quem jogar.</p>
-      <div id="erro"></div>
+      <div id="erro">${falhouGoogle ? '<p class="aviso erro">Não foi possível entrar com o Google. Tente de novo.</p>' : ''}</div>
+      ${google}
       ${cad ? '<div class="campo"><label>Seu nome</label><input name="nome" required autocomplete="name"></div><div class="campo"><label>Nome de usuário</label><input name="usuario" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_.@]{3,21}" placeholder="ex.: carlos.cg" autocomplete="username"><span class="suave">Aparece nas suas publicações; é como te encontram para convites.</span></div>' : ''}
       <div class="campo"><label>E-mail</label><input type="email" name="email" required autocomplete="${cad ? 'email' : 'username'}"></div>
       <div class="campo"><label>Senha</label><input type="password" name="senha" required minlength="${cad ? 8 : 1}" autocomplete="${cad ? 'new-password' : 'current-password'}"></div>
@@ -1068,6 +1072,10 @@
     const [caminho, parametros] = (location.hash || '#/').split('?');
     const partes = caminho.replace(/^#\/?/, '').split('/');
     const [rota, arg, arg2] = partes;
+    if (rota === 'google' && arg) {  // volta do login com Google: o servidor entrega o token no fragmento
+      estado.token = arg; estado.usuario = null; guardar('playgo_token', arg);
+      location.replace(location.pathname + '#/'); return;  // troca a entrada do histórico: o token não fica no "voltar"
+    }
     if (rota === 'entrar' || rota === 'cadastro') return vEntrar(rota);
     if (rota === 'documento') { $('#topo').hidden = true; $('#abas').hidden = true; return vDocumento(arg); }
     if (!(await garantirSessao())) { location.hash = '#/entrar'; return; }

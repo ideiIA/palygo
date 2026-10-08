@@ -16,6 +16,7 @@ from .. import (
     descoberta,
     detalhes,
     feed,
+    google,
     grupos,
     midia,
     modalidades,
@@ -223,6 +224,11 @@ def _filtros(
 
 
 # ---------------------------------------------------------------- conta
+
+
+@router.get("/auth/provedores")
+def provedores():
+    return {"google": google.configurado()}
 
 
 @router.post("/auth/cadastro")

@@ -84,6 +84,7 @@ class Usuario(Base):
     nome: Mapped[str] = mapped_column(String(200))
     email: Mapped[str] = mapped_column(String(200), unique=True)  # sempre em minúsculas
     senha_hash: Mapped[str] = mapped_column(Text)
+    google_sub: Mapped[str | None] = mapped_column(String(40), unique=True)  # id da conta Google (login social); a senha vira aleatória
     admin: Mapped[bool] = mapped_column(Boolean, default=False)
     # Moderador geral: aprova a fila e oculta em qualquer mural, mas não gere usuários nem perfis
     moderador: Mapped[bool] = mapped_column(Boolean, default=False)
