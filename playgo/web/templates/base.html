@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}PlayGo — Esporte perto de você{% endblock %}</title>
+  <meta name="theme-color" content="#6c4cff">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/mural.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+  <script>
+    window.PLAYGO = {
+      eu: { id: {{ usuario.id }}, arroba: {{ usuario.arroba|tojson }}, admin: {{ 'true' if usuario.equipe_moderacao else 'false' }}, superadmin: {{ 'true' if usuario.admin else 'false' }}, consentLocalizacao: {{ 'true' if usuario.consent_localizacao else 'false' }} },
+      posicao: {% if usuario.tem_localizacao %}{ lat: {{ usuario.latitude }}, lng: {{ usuario.longitude }} }{% else %}null{% endif %}
+    };
+  </script>
+  <script src="/static/web.js" defer></script>
+  <script src="/static/mural.js" defer></script>
+</head>
+{% set itens = [
+  ('home', '/', '⌂', 'Início'),
+  ('mural', '/mural', '✎', 'Feed'),
+  ('explorar', '/explorar', '⌖', 'Explorar'),
+  ('criar', '/atividades/nova', '＋', 'Criar atividade'),
+  ('grupos', '/grupos', '◎', 'Meus grupos'),
+  ('comunidades', '/comunidades', '☺', 'Comunidades'),
+  ('campeonatos', '/campeonatos', '★', 'Campeonatos'),
+] %}
+<body>
+<div class="app">
+<aside class="sidebar">
+  <a class="logo" href="/">Play<span>Go</span></a>
+  <nav class="nav">
+    {% for chave, url, icone, nome in itens %}
+    <a href="{{ url }}" class="{{ 'active' if aba == chave }}"><span class="ico">{{ icone }}</span><span class="t">{{ nome }}</span></a>
+    {% endfor %}
+    <div class="manager"><small>Gestão</small></div>
+    <a href="/gestao" class="{{ 'active' if aba == 'gestao' }}"><span class="ico">▦</span><span class="t">Minha Arena</span></a>
+    {% if usuario.admin %}
+    <a href="/administracao" class="{{ 'active' if aba == 'administracao' }}"><span class="ico">⚙</span><span class="t">Administração</span></a>
+    {% endif %}
+    {% if usuario.equipe_moderacao %}
+    <a href="/moderacao" class="{{ 'active' if aba == 'moderacao' }}"><span class="ico">🛡</span><span class="t">Moderação{% if fila_moderacao %} <b class="selo">{{ fila_moderacao }}</b>{% endif %}</span></a>
+    {% endif %}
+  </nav>
+</aside>
+
+<main class="main">
+<header class="topbar">
+  <form class="search" action="/explorar" method="get" role="search">
+    ⌕ <input name="q" value="{{ busca or '' }}" placeholder="Busque futebol, vôlei, corrida, arena..." aria-label="Buscar">
+  </form>
+  <div class="topo-direita">
+    {% if convites_pendentes %}<a class="sino" href="/convites" aria-label="Convites" title="Você tem convites">✉️<b>{{ convites_pendentes }}</b></a>{% endif %}
+    <a class="sino" href="/notificacoes" aria-label="Notificações" title="Notificações">🔔{% if nao_lidas %}<b>{{ nao_lidas if nao_lidas < 100 else '99+' }}</b>{% endif %}</a>
+    <a class="avatar" href="/perfil" title="{{ usuario.arroba }}">{% if usuario.foto_url %}<img src="{{ usuario.foto_url }}" alt="">{% else %}{{ usuario.iniciais }}{% endif %}</a>
+  </div>
+</header>
+
+<div class="content">
+  {% if erro %}<p class="aviso erro" role="alert">{{ erro }}</p>{% endif %}
+  {% if ok %}<p class="aviso ok">{{ ok }}</p>{% endif %}
+  {% block conteudo %}{% endblock %}
+  <footer class="rodape-legal"><a href="/termos">Termos de Uso</a> · <a href="/politica-de-privacidade">Política de Privacidade</a> · <a href="/privacidade">Meus dados e privacidade</a></footer>
+</div>
+</main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+</body>
+</html>

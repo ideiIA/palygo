@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% import "_cards.html" as c %}
+{% block titulo %}Meus grupos — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>Meus grupos</h2><a class="btn purple" href="/grupos/novo">+ Criar grupo</a></div>
+{% if g.meus %}<div class="grid">{% for x in g.meus %}{{ c.grupo(x) }}{% endfor %}</div>
+{% else %}{{ c.vazio('Você ainda não participa de nenhum grupo. Entre em um abaixo ou crie o seu.') }}{% endif %}
+
+{% if g.descobrir %}
+<div class="section-title"><h2>Descubra grupos perto de você</h2></div>
+<div class="grid">
+  {% for x in g.descobrir %}
+  <div class="card">
+    <a class="cobre" href="/grupos/{{ x.id }}" aria-label="{{ x.nome }}"></a>
+    <span class="tag {{ x.modalidade.cor }}">{{ x.modalidade.icone }} {{ x.membros }} membros</span>
+    <h3>{{ x.nome }}</h3>
+    <div class="meta">{{ x.modalidade.nome }}{% if x.cidade %} • {{ x.cidade }}{% endif %}{% if x.distancia %} • {{ x.distancia }}{% endif %}</div>
+    <div class="spots"><span></span><form method="post" action="/grupos/{{ x.id }}/entrar"><button class="btn soft pequeno">Entrar no grupo</button></form></div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

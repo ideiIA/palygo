@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% import "_cards.html" as c %}
+{% block titulo %}Minha Arena — PlayGo{% endblock %}
+{% block conteudo %}
+{% if not arena %}
+<div class="section-title"><h2>Minha Arena</h2></div>
+<div class="panel" style="text-align:center;padding:48px 24px">
+  <h2 style="font-size:24px">Ocupe seus horários ociosos e divulgue seus campeonatos</h2>
+  <p class="suave" style="max-width:520px;margin:12px auto 22px">Cadastre sua arena, organize a agenda das quadras e transforme horários vagos em oportunidades para atletas que estão por perto.</p>
+  <a class="btn purple" href="/gestao/arenas/nova">Cadastrar minha arena</a>
+</div>
+{% else %}
+<div class="section-title">
+  <h2>{{ arena.nome }}</h2>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    {% if arenas|length > 1 %}<select onchange="location.href='/gestao?arena=' + this.value" style="border:1px solid var(--border);border-radius:12px;padding:10px">{% for x in arenas %}<option value="{{ x.id }}" {{ 'selected' if x.id == arena.id }}>{{ x.nome }}</option>{% endfor %}</select>{% endif %}
+    <a class="btn soft" href="/arenas/{{ arena.id }}">Ver página pública</a>
+    <a class="btn soft" href="/gestao/arenas/nova">+ Nova arena</a>
+    <a class="btn purple" href="#nova-quadra" onclick="document.getElementById('nova-quadra').open = true">+ Nova quadra</a>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><b>{{ p.reservas_hoje }}</b><span>Reservas hoje</span></div>
+  <div class="stat"><b>{{ p.ocupacao_pct }}%</b><span>Ocupação</span></div>
+  <div class="stat"><b>{{ p.eventos_ativos }}</b><span>Eventos ativos</span></div>
+  <div class="stat"><b>{{ '{:,}'.format(p.atletas_alcancados).replace(',', '.') }}</b><span>Atletas alcançados</span></div>
+</div>
+
+<div class="livebar">
+  {% if p.horarios_ociosos %}
+  <div><span class="pulse"></span><strong>{{ p.horarios_ociosos }} horário{{ 's' if p.horarios_ociosos != 1 }} ocioso{{ 's' if p.horarios_ociosos != 1 }} hoje.</strong> Publique para atletas próximos e ajude a formar novos jogos.</div>
+  <form method="post" action="/gestao/{{ arena.id }}/divulgar-ociosos"><button class="btn lime">Divulgar horário</button></form>
+  {% else %}
+  <div><span class="pulse"></span><strong>Sem horários ociosos pelo resto do dia{% if p.horarios_divulgados %} — {{ p.horarios_divulgados }} já divulgado{{ 's' if p.horarios_divulgados != 1 }}{% endif %}.</strong></div>
+  {% endif %}
+</div>
+
+<div class="section-title">
+  <h2>Agenda {{ 'de hoje' if dia.isoformat() == hoje else ('de ' ~ dia_texto) }}</h2>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a class="btn soft pequeno" href="/gestao?arena={{ arena.id }}&dia={{ anterior }}">←</a>
+    <span class="suave">{{ dia_texto }}</span>
+    <a class="btn soft pequeno" href="/gestao?arena={{ arena.id }}&dia={{ proximo }}">→</a>
+  </div>
+</div>
+<div class="panel">
+  {% if agenda.quadras %}
+  <table class="schedule">
+    <thead><tr><th>Horário</th>{% for q in agenda.quadras %}<th>{{ q.nome }}<div class="suave" style="text-transform:none;font-weight:600">{{ q.modalidades|join(', ')|replace('_', ' ') }}</div></th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for l in agenda.linhas %}
+    <tr><td>{{ l.hora }}</td>
+      {% for cel in l.celulas %}
+      <td class="{{ 'celula-passada' if cel.passado }}">
+        {% if cel.estado == 'livre' %}
+          <span class="tag green">Livre</span>
+          {% if not cel.passado %}
+          <form method="post" action="/gestao/quadras/{{ cel.quadra_id }}/divulgar"><input type="hidden" name="inicio" value="{{ l.inicio }}"><input type="hidden" name="arena" value="{{ arena.id }}"><button class="link-botao">Divulgar</button></form>
+          <form method="post" action="/gestao/quadras/{{ cel.quadra_id }}/reservar" onsubmit="const n = prompt('Nome da reserva (ex.: Futebol do João)'); if (n === null) return false; this.rotulo.value = n;">
+            <input type="hidden" name="inicio" value="{{ l.inicio }}"><input type="hidden" name="rotulo" value=""><input type="hidden" name="arena" value="{{ arena.id }}"><button class="link-botao">Reservar</button></form>
+          {% endif %}
+        {% elif cel.estado == 'divulgado' %}
+          <span class="tag orange">Divulgado</span>
+          <form method="post" action="/gestao/horarios/{{ cel.horario_id }}/remover"><input type="hidden" name="arena" value="{{ arena.id }}"><button class="link-botao" style="color:var(--red)">Retirar</button></form>
+        {% else %}
+          <span class="celula-ocupada">{{ cel.rotulo }}</span>
+          {% if cel.atividade_id %}<a href="/atividades/{{ cel.atividade_id }}" class="link-botao">ver</a>
+          {% elif cel.tipo in ('reserva', 'bloqueio') %}<form method="post" action="/gestao/reservas/{{ cel.reserva_id }}/liberar"><input type="hidden" name="arena" value="{{ arena.id }}"><button class="link-botao" style="color:var(--red)">Liberar</button></form>{% endif %}
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}{{ c.vazio('Cadastre a primeira quadra para montar a agenda.') }}{% endif %}
+</div>
+
+<details id="nova-quadra" class="panel" style="margin-top:20px">
+  <summary style="font-weight:800;cursor:pointer">+ Nova quadra</summary>
+  <form method="post" action="/gestao/{{ arena.id }}/quadras" style="margin-top:14px">
+    <div class="form-grid">
+      <div class="field"><label for="qnome">Nome</label><input name="nome" id="qnome" required placeholder="Ex.: Quadra 04"></div>
+      <div class="field"><label for="qvalor">Valor da hora (R$)</label><input name="valor_hora" id="qvalor" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label for="qcap">Capacidade</label><input type="number" name="capacidade" id="qcap" min="1"></div>
+      <div class="field full"><label>Modalidades</label><div class="checks">{% for m in modalidades %}<label><input type="checkbox" name="modalidades" value="{{ m.codigo }}"> {{ m.icone }} {{ m.nome }}</label>{% endfor %}</div></div>
+    </div><br><button class="btn purple">Cadastrar quadra</button>
+  </form>
+</details>
+
+<div class="two" style="margin-top:20px">
+  <div class="panel">
+    <h2>Ocupação por horário</h2>
+    <div class="barras">{% for h in p.ocupacao_por_hora %}<div class="barra-linha"><span>{{ h.hora }}</span><div class="barra" style="margin:0"><i style="width:{{ h.pct }}%"></i></div><span>{{ h.pct }}%</span></div>{% endfor %}</div>
+    <h2 style="margin-top:24px">Dias com maior demanda <span class="suave">(últimos 30 dias)</span></h2>
+    {% set maximo = (p.demanda_por_dia|map(attribute='total')|max) or 1 %}
+    <div class="barras">{% for d in p.demanda_por_dia %}<div class="barra-linha"><span>{{ d.dia }}</span><div class="barra" style="margin:0"><i style="width:{{ (100 * d.total / maximo)|round|int }}%"></i></div><span>{{ d.total }}</span></div>{% endfor %}</div>
+  </div>
+  <div class="panel">
+    <h2>Modalidades mais procuradas</h2>
+    {% if p.modalidades_procuradas %}<div class="pessoas">{% for m in p.modalidades_procuradas %}<div class="pessoa"><span style="font-size:22px">{{ m.icone }}</span><span class="nome">{{ m.nome }}</span><span class="acoes suave">{{ m.total }} participações</span></div>{% endfor %}</div>
+    {% else %}<p class="suave">Ainda sem atividades na arena.</p>{% endif %}
+    <h2 style="margin-top:24px">Clientes recorrentes</h2>
+    <p><b style="font-size:28px">{{ p.clientes_recorrentes }}</b> <span class="suave">atletas com 2 ou mais jogos aqui</span></p>
+    <h2 style="margin-top:24px">Campeonatos</h2>
+    {% for x in campeonatos %}<div class="pessoa" style="margin-bottom:8px"><a href="/campeonatos/{{ x.id }}"><b>{{ x.nome }}</b></a><span class="acoes suave">{{ x.equipes }}/{{ x.max_equipes }} equipes</span></div>
+    {% else %}<p class="suave">Nenhum campeonato ativo. <a href="/campeonatos/novo">Criar campeonato</a></p>{% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

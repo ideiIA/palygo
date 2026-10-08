@@ -1,0 +1,14 @@
+.venv/
+.pgdata/
+.env
+__pycache__/
+.pytest_cache/
+.chave_sessao
+uploads/
+.ruff_cache/
+.vercel/
+.DS_Store
+
+# Documentos de negócio: ficam só na máquina local
+PlayGO.docx
+prototipo_playgo_atualizado.html

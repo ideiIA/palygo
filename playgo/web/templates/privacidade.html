@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Privacidade — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>🔒 Meus dados e privacidade</h2></div>
+<p class="suave" style="margin:-6px 0 14px">Seus direitos como titular de dados (LGPD, art. 18). Veja a <a href="/politica-de-privacidade">Política de Privacidade</a> e os <a href="/termos">Termos de Uso</a>.</p>
+<div class="panel" style="margin-bottom:16px">
+  <h2>Termos aceitos</h2>
+  <p>Versão <b>{{ versao }}</b>{% if aceite_em %}, aceita em {{ aceite_em.strftime('%d/%m/%Y às %H:%M') }}{% endif %}. Cada aceite fica registrado com data, hora e endereço IP.</p>
+</div>
+<div class="panel" style="margin-bottom:16px">
+  <h2>Cópia dos meus dados</h2>
+  <p>Baixe tudo o que o PlayGo guarda sobre você — perfil, publicações (com as versões anteriores), comentários, participações e registros de acesso — em um arquivo legível.</p>
+  <a class="btn purple" href="/privacidade/meus-dados.json">Baixar meus dados (.json)</a>
+</div>
+<div class="panel" style="margin-bottom:16px">
+  <h2>Localização</h2>
+  <p>{% if usuario.consent_localizacao %}Você autorizou guardar a localização do seu perfil{% if usuario.consent_localizacao_em %} em {{ usuario.consent_localizacao_em.strftime('%d/%m/%Y') }}{% endif %}.{% else %}Você <b>não</b> autorizou guardar a localização no perfil. Você ainda pode publicar marcando o local manualmente.{% endif %}</p>
+  {% if usuario.consent_localizacao %}<form method="post" action="/privacidade/revogar-localizacao" onsubmit="return confirm('Apagar a localização do perfil e revogar a autorização?')"><button class="btn soft">Revogar e apagar minha localização</button></form>{% endif %}
+</div>
+<div class="panel" style="margin-bottom:16px;border-color:#ffd0d0">
+  <h2>Excluir minha conta</h2>
+  <p>Seus dados pessoais são <b>anonimizados</b> (nome, e-mail, @usuario, foto, localização…), suas publicações e comentários saem do ar, as atividades que você organiza são canceladas e as vagas que você ocupa são liberadas. Por obrigação legal, os registros de interação e o conteúdo excluído ficam guardados de forma restrita pelo prazo descrito na Política de Privacidade e depois são eliminados. <b>Não dá para desfazer.</b></p>
+  <form method="post" action="/privacidade/excluir-conta" style="display:flex;gap:8px;flex-wrap:wrap" onsubmit="return confirm('Excluir a conta definitivamente?')">
+    <input type="password" name="senha" required placeholder="Confirme com sua senha" autocomplete="current-password" style="border:1px solid var(--border);border-radius:12px;padding:12px;min-width:240px">
+    <button class="btn perigo">Excluir minha conta</button>
+  </form>
+</div>
+<div class="panel"><h2>Outros pedidos</h2><p>Correção de dados, revisão de uma decisão de moderação ou qualquer outro direito do art. 18: escreva para o encarregado de dados, no contato indicado na <a href="/politica-de-privacidade">Política de Privacidade</a>.</p></div>
+{% endblock %}

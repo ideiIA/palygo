@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titulo %}Feed — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title">
+  <h2>Feed do PlayGo</h2>
+  <div class="chips" id="filtro-feed">
+    <button class="chip ativo" data-raio="">Todos</button>
+    <button class="chip" data-raio="10">Perto de mim (10 km)</button>
+    <button class="chip" data-raio="3">Bem perto (3 km)</button>
+  </div>
+</div>
+<p class="suave" style="margin:-6px 0 14px">Publicações de todo o app e as que organizadores e participantes quiseram mostrar para todo mundo. Toda publicação mostra o local. Você publica aqui ou no mural de cada atividade, campeonato ou comunidade.</p>
+<div style="max-width:720px"><div id="mural"></div></div>
+<script>
+  let instancia = null;
+  function abrir(raio) {
+    const extra = { geral: true };
+    if (raio && PLAYGO.posicao) extra.consulta = 'raio=' + raio;
+    instancia = montarMural('mural', extra);
+  }
+  window.addEventListener('load', () => {
+    abrir('');
+    document.querySelectorAll('#filtro-feed .chip').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.raio && !PLAYGO.posicao) return toast('Informe sua localização no Perfil para filtrar por distância.');
+      document.querySelectorAll('#filtro-feed .chip').forEach((x) => x.classList.toggle('ativo', x === b));
+      abrir(b.dataset.raio);
+    }));
+  });
+</script>
+{% endblock %}

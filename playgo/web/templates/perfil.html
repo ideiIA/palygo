@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% import "_cards.html" as c %}
+{% block titulo %}Meu perfil — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>Meu perfil</h2>
+  <form method="post" action="/sair"><button class="btn soft">Sair</button></form></div>
+
+<form method="post" action="/perfil">
+  <div class="panel" style="margin-bottom:20px">
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:18px"><span class="avatar" style="width:64px;height:64px;font-size:22px">{% if usuario.foto_url %}<img src="{{ usuario.foto_url }}" alt="Sua foto">{% else %}{{ usuario.iniciais }}{% endif %}</span><div><b style="font-size:18px">{{ usuario.nome }}</b><div class="suave">{{ usuario.email }}</div><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button type="button" class="btn soft pequeno" onclick="document.getElementById('arquivo-foto').click()">📷 {{ 'Trocar foto' if usuario.foto_url else 'Adicionar foto' }}</button>{% if usuario.foto_url %}<button type="button" class="btn perigo pequeno" onclick="removerFoto()">Remover</button>{% endif %}<input type="file" id="arquivo-foto" accept="image/jpeg,image/png,image/webp" hidden onchange="enviarFoto(this)"></div><div class="suave" style="margin-top:4px">Aparece nas suas publicações e comentários. Recortada em quadrado; a localização da câmera é removida.</div></div></div><script>
+  async function enviarFoto(inp) {
+    const f = inp.files[0];
+    if (!f) return;
+    const fd = new FormData();
+    fd.append('arquivo', f);
+    try { await webApi('/me/foto', { metodo: 'POST', form: fd }); location.reload(); } catch (e) { toast(e.message); }
+  }
+  async function removerFoto() {
+    if (!confirm('Remover sua foto de perfil?')) return;
+    try { await webApi('/me/foto', { metodo: 'DELETE' }); location.reload(); } catch (e) { toast(e.message); }
+  }
+</script>
+    <div class="form-grid">
+      <div class="field"><label>Nome de usuário</label>
+        <div style="display:flex;gap:8px"><input id="nome_usuario_atual" value="{{ usuario.arroba }}" readonly style="flex:1"><button type="button" class="btn soft pequeno" onclick="document.getElementById('trocar-usuario').hidden = false">Trocar</button></div>
+        <span class="suave">É o que aparece nas suas publicações e como as pessoas te encontram para convites.</span></div>
+      <div class="field"><label for="nome">Nome</label><input name="nome" id="nome" value="{{ usuario.nome }}" required></div>
+      <div class="field"><label for="cidade">Cidade</label><input name="cidade" id="cidade" value="{{ usuario.cidade or '' }}"></div>
+      <div class="field"><label for="sexo">Sexo <span class="suave">(para atividades por categoria)</span></label>
+        <select name="sexo" id="sexo"><option value="">Prefiro não informar</option><option value="M" {{ 'selected' if usuario.sexo == 'M' }}>Masculino</option><option value="F" {{ 'selected' if usuario.sexo == 'F' }}>Feminino</option></select></div>
+      <div class="field"><label for="nascimento">Nascimento <span class="suave">(para faixa etária)</span></label><input type="date" name="nascimento" id="nascimento" value="{{ usuario.nascimento.isoformat() if usuario.nascimento }}"></div>
+      <div class="field"><label for="raio_km">Distância máxima que aceito percorrer</label>
+        <select name="raio_km" id="raio_km">{% for r in (2, 5, 10, 20, 50) %}<option value="{{ r }}" {{ 'selected' if usuario.raio_km == r }}>Até {{ r }} km</option>{% endfor %}</select></div>
+      <div class="field"><label>Minha localização</label>
+        <div><button type="button" class="btn soft" data-localizar>📍 Usar minha localização</button>
+        <span class="suave">{% if usuario.tem_localizacao %}definida{% else %}ainda não informada{% endif %}</span></div></div>
+      <div class="field full"><label>Disponibilidade</label>
+        <div class="checks">{% for k, n in periodos %}<label><input type="checkbox" name="disponibilidade" value="{{ k }}" {{ 'checked' if k in usuario.disponibilidade }}> {{ n }}</label>{% endfor %}</div>
+        <span class="suave">Sem nada marcado, consideramos qualquer horário.</span></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px">
+    <h2>Esportes que pratico</h2>
+    <div class="form-grid">
+      {% for m in modalidades %}
+      {% set nivel = usuario.nivel_em(m.id) %}
+      <div class="field" style="grid-template-columns:1fr 150px;align-items:center;background:#fafbfc;border:1px solid var(--border);border-radius:12px;padding:8px 12px">
+        <label style="font-weight:700">{{ m.icone }} {{ m.nome }}</label>
+        <select name="esporte_{{ m.id }}" style="padding:8px"><option value="">Não pratico</option>{% for k, n in niveis %}<option value="{{ k }}" {{ 'selected' if nivel == k }}>{{ n }}</option>{% endfor %}</select>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px">
+    <h2>Notificações</h2>
+    <div class="checks">
+      <label><input type="checkbox" name="notif_vagas" value="1" {{ 'checked' if usuario.notif_vagas }}> 🔥 Vagas e jogos perto de mim</label>
+      <label><input type="checkbox" name="notif_lembretes" value="1" {{ 'checked' if usuario.notif_lembretes }}> ⏱ Lembretes dos meus jogos</label>
+      <label><input type="checkbox" name="notif_campeonatos" value="1" {{ 'checked' if usuario.notif_campeonatos }}> 🏆 Campeonatos</label>
+      <label><input type="checkbox" name="notif_grupos" value="1" {{ 'checked' if usuario.notif_grupos }}> 👥 Meus grupos</label>
+    </div><br>
+    <div class="field" style="max-width:320px"><label for="notif_raio_km">Avisar sobre vagas até</label>
+      <select name="notif_raio_km" id="notif_raio_km">{% for r in (1, 2, 3, 5, 10, 20) %}<option value="{{ r }}" {{ 'selected' if usuario.notif_raio_km == r }}>{{ r }} km de mim</option>{% endfor %}</select></div>
+  </div>
+  <button class="btn purple">Salvar perfil</button>
+  <a class="btn soft" href="/privacidade" style="margin-left:8px">🔒 Meus dados e privacidade</a>
+</form>
+<form id="trocar-usuario" method="post" action="/perfil/usuario" class="panel" style="margin-top:16px" hidden>
+  <h2>Trocar nome de usuário</h2>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><input name="nome_usuario" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_.@]{3,21}" placeholder="novo.usuario" style="border:1px solid var(--border);border-radius:12px;padding:12px"><button class="btn purple">Salvar</button></div>
+  <p class="suave">As publicações antigas passam a mostrar o novo nome. A troca fica registrada.</p>
+</form>
+
+{% if proximas %}
+<div class="section-title"><h2>Meus próximos jogos</h2></div>
+<div class="grid">{% for a in proximas %}{{ c.atividade(a) }}{% endfor %}</div>
+{% endif %}
+{% if historico %}
+<div class="section-title"><h2>Histórico</h2></div>
+<div class="panel"><div class="pessoas">{% for a in historico[:15] %}<div class="pessoa"><span>{{ a.modalidade.icone }}</span><a href="/atividades/{{ a.id }}">{{ a.nome }}</a><span class="suave">{{ a.quando }}</span></div>{% endfor %}</div></div>
+{% endif %}
+{% endblock %}

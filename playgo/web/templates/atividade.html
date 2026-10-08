@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% import "_cards.html" as c %}
+{% block titulo %}{{ a.nome }} — PlayGo{% endblock %}
+{% block conteudo %}
+{% set pct = (100 * a.confirmados / a.max_participantes)|round|int %}
+<div class="detalhe-topo">
+  <div>
+    <span class="tag {{ a.modalidade.cor }}">{{ a.modalidade.icone }} {{ a.modalidade.nome|upper }}</span>
+    {% if a.status == 'cancelada' %}<span class="tag rosa">CANCELADA</span>{% elif a.encerrada %}<span class="tag cinza">ENCERRADA</span>{% elif a.falta_gente %}<span class="tag rosa">🔥 {{ a.rotulo_falta }}</span>{% endif %}
+    <h1>{{ a.nome }}</h1>
+    <div class="meta">Organizado por <b>{{ a.organizador.arroba }}</b>{% if a.grupo %} • grupo <a href="/grupos/{{ a.grupo.id }}">{{ a.grupo.nome }}</a>{% endif %}</div>
+  </div>
+  <div>
+    {% if not a.encerrada %}
+      {% if a.minha_participacao and a.organizador.id != usuario.id %}
+      <form method="post" action="/atividades/{{ a.id }}/sair"><button class="btn perigo">{{ 'Sair da lista de espera' if a.minha_participacao == 'espera' else ('Cancelar pedido' if a.minha_participacao == 'pendente' else 'Desistir') }}</button></form>
+      {% elif not a.minha_participacao %}
+      <form method="post" action="/atividades/{{ a.id }}/entrar"><button class="btn purple">{{ 'Pedir para participar' if a.visibilidade == 'autorizados' else ('Entrar na lista de espera' if a.vagas == 0 else 'EU VOU') }}</button></form>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if a.minha_participacao == 'confirmado' %}<p class="aviso ok">✓ Você está confirmado nesta atividade.</p>
+{% elif a.minha_participacao == 'espera' %}<p class="aviso" style="background:#fff6dd;border:1px solid #ffe29a">Você está na lista de espera{% if a.posicao_espera %} (posição {{ a.posicao_espera }}){% endif %}. Se alguém desistir, você entra automaticamente e avisamos.</p>
+{% elif a.minha_participacao == 'pendente' %}<p class="aviso" style="background:#fff6dd;border:1px solid #ffe29a">Seu pedido foi enviado ao organizador e aguarda aprovação.</p>{% endif %}
+
+<div class="two">
+  <div class="panel">
+    <div class="fatos">
+      <div class="fato"><small>Quando</small><b>{{ a.quando }}</b>{% if not a.encerrada %}<div class="suave">{{ a.contagem }}</div>{% endif %}</div>
+      <div class="fato"><small>Onde</small><b>{{ a.local_nome }}</b>{% if a.distancia %}<div class="suave">a {{ a.distancia }} de você</div>{% endif %}</div>
+      <div class="fato"><small>Nível</small><b>{{ a.nivel_nome }}</b></div>
+      <div class="fato"><small>Valor</small><b>{{ a.valor_texto }}{% if a.valor %} por pessoa{% endif %}</b></div>
+      <div class="fato"><small>Duração</small><b>{{ a.duracao_min }} min</b></div>
+      <div class="fato"><small>Quem participa</small><b>{{ {'publica': 'Pública', 'autorizados': 'Só autorizados', 'link': 'Só por link'}[a.visibilidade] }}</b></div>
+    </div>
+    <b>{{ a.confirmados }}/{{ a.max_participantes }} confirmados — {{ a.vagas }} vaga{{ 's' if a.vagas != 1 }} disponíve{{ 'is' if a.vagas != 1 else 'l' }}</b>
+    <div class="barra"><i style="width:{{ pct }}%"></i></div>
+    {% if a.descricao %}<h3 style="margin-top:20px">Sobre</h3><p>{{ a.descricao }}</p>{% endif %}
+    {% if a.regras %}<h3 style="margin-top:14px">Regras</h3><p>{{ a.regras }}</p>{% endif %}
+    {% if a.percurso %}<h3 style="margin-top:14px">Percurso</h3><p>{{ a.percurso }}</p>{% endif %}
+    {% if a.categoria != 'misto' or a.idade_min or a.idade_max %}
+    <p class="suave">{% if a.categoria != 'misto' %}Categoria {{ a.categoria }}. {% endif %}{% if a.idade_min or a.idade_max %}Faixa etária: {{ a.idade_min or '—' }} a {{ a.idade_max or '—' }} anos.{% endif %}</p>{% endif %}
+
+    {% if a.sou_organizador and not a.encerrada %}
+    <h3 style="margin-top:22px">Organização</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+      {% if a.falta_gente %}<form method="post" action="/atividades/{{ a.id }}/falta-gente"><input type="hidden" name="ligado" value="0"><button class="btn soft">Tirar destaque “falta gente”</button></form>
+      {% elif a.vagas > 0 %}<form method="post" action="/atividades/{{ a.id }}/falta-gente"><input type="hidden" name="ligado" value="1"><button class="btn lime" style="background:var(--pink);color:#fff">🔥 Falta gente</button></form>{% endif %}
+      <form method="post" action="/atividades/{{ a.id }}/capacidade" style="display:flex;gap:6px"><input type="number" name="max_participantes" min="{{ a.confirmados }}" value="{{ a.max_participantes }}" style="width:84px;border:1px solid var(--border);border-radius:10px;padding:8px"><button class="btn soft pequeno">Mudar vagas</button></form>
+      <form method="post" action="/atividades/{{ a.id }}/cancelar" onsubmit="return confirm('Cancelar esta atividade? Os participantes serão avisados.')"><button class="btn perigo">Cancelar atividade</button></form>
+    </div>
+
+    <h3 style="margin-top:22px">Convidar pelo @usuario</h3>
+    <div class="convidar" data-escopo="atividade" data-id="{{ a.id }}"></div>
+    {% if a.link %}
+    <h3 style="margin-top:18px">Link de convite</h3>
+    <p class="suave" style="margin:2px 0 6px">Quem receber este link entra direto, sem aprovação. Compartilhe só com quem você quer.</p>
+    <div style="display:flex;gap:6px"><input readonly value="{{ request.base_url }}{{ a.link.lstrip('/') }}" id="link-copia" style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px"><button class="btn soft pequeno" type="button" onclick="navigator.clipboard.writeText(document.getElementById('link-copia').value).then(() => toast('Link copiado!'))">Copiar</button></div>
+    <form method="post" action="/escopos/atividade/{{ a.id }}/link/renovar" style="margin-top:8px" onsubmit="return confirm('Gerar um novo link? O atual deixa de funcionar.')"><button class="link-botao" style="color:var(--red)">Gerar novo link (derruba o atual)</button></form>
+    {% endif %}
+    <h3 style="margin-top:18px">Quem cuida do mural</h3>
+    <p class="suave" style="margin:2px 0 6px">Você é o moderador do mural desta atividade. Indique outras pessoas para ajudar a ocultar publicações e comentários.</p>
+    <div class="moderadores" data-escopo="atividade" data-id="{{ a.id }}" data-atual='{{ a.moderadores|tojson }}'></div>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if a.pendentes %}
+    <div class="panel" style="margin-bottom:18px">
+      <h2>Aguardando aprovação ({{ a.pendentes|length }})</h2>
+      <div class="pessoas">
+        {% for p in a.pendentes %}
+        <div class="pessoa"><span class="avatar pequeno">{{ p.iniciais }}</span><span class="nome">{{ p.arroba }}</span>
+          <span class="acoes">
+            <form method="post" action="/atividades/{{ a.id }}/participacoes/{{ p.participacao_id }}/aprovar"><button class="btn purple pequeno">Aprovar</button></form>
+            <form method="post" action="/atividades/{{ a.id }}/participacoes/{{ p.participacao_id }}/recusar"><button class="btn perigo pequeno">Recusar</button></form>
+          </span></div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    <div class="panel">
+      <h2>Confirmados ({{ a.participantes|length }})</h2>
+      <div class="pessoas">
+        {% for p in a.participantes %}
+        <div class="pessoa"><span class="avatar pequeno">{{ p.iniciais }}</span><span class="nome">{{ p.arroba }}</span>
+          {% if p.organizador %}<span class="tag roxo">Organizador</span>{% elif p.nivel %}<span class="suave">{{ niveis_nome[p.nivel] }}</span>{% endif %}
+          {% if a.sou_organizador and not p.organizador and not a.encerrada %}
+          <span class="acoes"><form method="post" action="/atividades/{{ a.id }}/participacoes/{{ p.participacao_id }}/remover" onsubmit="return confirm('Remover {{ p.arroba }}?')"><button class="link-botao" style="color:var(--red)">Remover</button></form></span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% set n_espera = a.espera|length if a.espera is not number and a.espera is not string else a.espera %}
+      {% if n_espera %}
+      <h3 style="margin-top:18px">Lista de espera ({{ n_espera }})</h3>
+      {% if a.sou_organizador %}<div class="pessoas" style="margin-top:8px">{% for p in a.espera %}<div class="pessoa"><span class="avatar pequeno">{{ p.iniciais }}</span><span class="nome">{{ loop.index }}. {{ p.arroba }}</span></div>{% endfor %}</div>{% endif %}
+      {% endif %}
+    </div>
+    <div class="map formulario" id="mapa" style="margin-top:18px"></div>
+  </div>
+</div>
+{% if not a.encerrada or a.mural_acesso %}
+<div class="section-title"><h2>💬 Mural da atividade</h2></div>
+{% if a.mural_acesso %}
+<p class="suave" style="margin:-6px 0 12px">Só quem participa vê e publica aqui. O local das publicações é sempre o desta atividade.{% if a.visibilidade != 'publica' %} Esta atividade é {{ 'só para autorizados' if a.visibilidade == 'autorizados' else 'só por link' }}: as publicações ficam apenas aqui.{% endif %}</p>
+<div style="max-width:760px"><div id="mural"></div></div>
+<script>window.addEventListener('load', () => montarMural('mural', { escopo: 'atividade', escopoId: {{ a.id }} }));</script>
+{% else %}
+<p class="vazio">O mural é exclusivo de quem participa da atividade. Entre para ver e publicar.</p>
+{% endif %}
+{% endif %}
+<script>
+  window.addEventListener('load', () => mapaPontos('mapa', {latitude: {{ a.latitude }}, longitude: {{ a.longitude }}}, [{tipo: 'atividade', id: {{ a.id }}, latitude: {{ a.latitude }}, longitude: {{ a.longitude }}, rotulo: {{ a.local_nome|tojson }}, distancia: {{ a.distancia|tojson }}, urgente: {{ 'true' if a.falta_gente else 'false' }}}]));
+</script>
+{% endblock %}

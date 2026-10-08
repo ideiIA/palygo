@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% import "_cards.html" as c %}
+{% block titulo %}{{ g.nome }} — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="detalhe-topo">
+  <div>
+    <span class="tag {{ g.modalidade.cor }}">{{ g.modalidade.icone }} {{ g.modalidade.nome|upper }}</span>
+    <h1>{{ g.nome }}</h1>
+    <div class="meta">{{ g.membros }} membro{{ 's' if g.membros != 1 }}{% if g.cidade %} • {{ g.cidade }}{% endif %}{% if g.local_habitual %} • 📍 {{ g.local_habitual }}{% endif %}</div>
+    {% if g.descricao %}<p>{{ g.descricao }}</p>{% endif %}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    {% if g.sou_membro %}
+      <a class="btn purple" href="/atividades/nova?grupo_id={{ g.id }}&modalidade_id={{ g.modalidade.id }}">+ Atividade do grupo</a>
+      <form method="post" action="/grupos/{{ g.id }}/sair" onsubmit="return confirm('Sair do grupo?')"><button class="btn perigo">Sair</button></form>
+    {% else %}
+      <form method="post" action="/grupos/{{ g.id }}/entrar"><button class="btn purple">Entrar no grupo</button></form>
+    {% endif %}
+  </div>
+</div>
+
+{% for av in g.avisos %}<p class="aviso" style="background:#fff6dd;border:1px solid #ffe29a">📌 <b>{{ av.autor }}:</b> {{ av.texto }} <span class="suave">({{ av.quando }})</span></p>{% endfor %}
+
+<div class="two">
+  <div>
+    <div class="section-title" style="margin-top:0"><h2>Próximos jogos</h2></div>
+    {% if g.agenda %}<div class="grid" style="grid-template-columns:1fr 1fr">{% for a in g.agenda %}{{ c.atividade(a) }}{% endfor %}</div>
+    {% else %}{{ c.vazio('Nenhuma atividade marcada.') }}{% endif %}
+    {% if g.historico %}
+    <div class="section-title"><h2>Histórico</h2></div>
+    <div class="panel"><div class="pessoas">{% for a in g.historico %}<div class="pessoa"><span class="tag cinza">{{ a.inicio[:10][8:] }}/{{ a.inicio[5:7] }}</span><a href="/atividades/{{ a.id }}">{{ a.nome }}</a><span class="suave">{{ a.confirmados }} jogadores</span></div>{% endfor %}</div></div>
+    {% endif %}
+  </div>
+  <div>
+    <div class="panel">
+      <h2>Conversa</h2>
+      {% if g.sou_membro %}
+      <div class="chat" id="chat">
+        {% for m in mensagens %}<div class="msg {{ 'aviso' if m.aviso }}"><small>{{ m.autor }} • {{ m.quando }}</small>{{ m.texto }}</div>{% endfor %}
+        {% if not mensagens %}<p class="suave">Ainda não há mensagens. Diga olá!</p>{% endif %}
+      </div>
+      <form class="chat-form" method="post" action="/grupos/{{ g.id }}/mensagem">
+        <input name="texto" placeholder="Escreva uma mensagem…" required maxlength="2000" autocomplete="off">
+        {% if g.sou_admin %}<label class="suave" style="display:flex;align-items:center;gap:4px"><input type="checkbox" name="aviso" value="1"> aviso</label>{% endif %}
+        <button class="btn purple">Enviar</button>
+      </form>
+      <script>const c = document.getElementById('chat'); if (c) c.scrollTop = c.scrollHeight;</script>
+      {% else %}<p class="suave">Entre no grupo para ver e participar da conversa.</p>{% endif %}
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <h2>Membros</h2>
+      <div class="pessoas">
+        {% for m in g.membros_lista %}
+        <div class="pessoa"><span class="avatar pequeno">{{ m.iniciais }}</span><span class="nome">{{ m.arroba }}</span>
+          {% if m.papel == 'admin' %}<span class="tag roxo">Admin</span>
+          {% elif g.sou_admin %}<span class="acoes"><form method="post" action="/grupos/{{ g.id }}/promover/{{ m.usuario_id }}"><button class="link-botao">Tornar admin</button></form></span>{% endif %}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% import "_cards.html" as c %}
+{% block titulo %}{{ k.nome }} — PlayGo{% endblock %}
+{% block conteudo %}
+{% set ms = k.minha_situacao %}
+<div class="detalhe-topo">
+  <div>
+    <span class="tag {{ k.modalidade.cor }}">{{ k.modalidade.icone }} {{ k.modalidade.nome|upper }}</span>
+    <span class="tag {{ 'verde' if k.inscricoes_abertas else 'cinza' }}">{{ k.situacao|upper }}</span>
+    <h1>🏆 {{ k.nome }}</h1>
+    <div class="meta">Organizado por <b>{{ k.organizador.arroba }}</b>{% if k.categoria %} • {{ k.categoria }}{% endif %}</div>
+  </div>
+</div>
+
+{% if ms.estado == 'convidado' %}
+<p class="aviso" style="background:#f0edff;border:1px solid #d6ccff;display:flex;gap:10px;align-items:center;flex-wrap:wrap">Você foi convidado para uma equipe deste campeonato.
+  <span style="display:flex;gap:6px"><form method="post" action="/equipes/{{ ms.equipe_id }}/responder"><input type="hidden" name="aceitar" value="1"><button class="btn purple pequeno">Aceitar</button></form>
+  <form method="post" action="/equipes/{{ ms.equipe_id }}/responder"><input type="hidden" name="aceitar" value="0"><button class="btn perigo pequeno">Recusar</button></form></span></p>
+{% endif %}
+
+<div class="two">
+  <div class="panel">
+    <div class="fatos">
+      <div class="fato"><small>Início</small><b>{{ k.data_inicio_texto }}</b>{% if k.data_fim_texto %}<div class="suave">até {{ k.data_fim_texto }}</div>{% endif %}</div>
+      <div class="fato"><small>Inscrições até</small><b>{{ k.inscricao_ate_texto }}</b></div>
+      <div class="fato"><small>Local</small><b>{{ k.local_nome }}</b>{% if k.distancia %}<div class="suave">a {{ k.distancia }} de você</div>{% endif %}</div>
+      <div class="fato"><small>Inscrição</small><b>{{ k.valor_inscricao_texto }}</b></div>
+      <div class="fato"><small>Formato</small><b>{{ k.atletas_por_equipe }} atletas por equipe</b></div>
+      {% if k.premiacao %}<div class="fato"><small>Premiação</small><b>{{ k.premiacao }}</b></div>{% endif %}
+    </div>
+    <b>{{ k.equipes }}/{{ k.max_equipes }} equipes inscritas — {{ k.vagas }} vaga{{ 's' if k.vagas != 1 }}</b>
+    <div class="barra"><i style="width:{{ (100 * k.equipes / k.max_equipes)|round|int }}%"></i></div>
+    {% if k.descricao %}<h3 style="margin-top:18px">Sobre</h3><p>{{ k.descricao }}</p>{% endif %}
+    {% if k.regulamento %}<h3 style="margin-top:14px">Regulamento</h3><p style="white-space:pre-line">{{ k.regulamento }}</p>{% endif %}
+
+    {% if k.inscricoes_abertas and ms.estado == 'fora' %}
+    <h3 style="margin-top:22px">Inscrever minha equipe</h3>
+    <form method="post" action="/campeonatos/{{ k.id }}/equipes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <input name="nome" required maxlength="100" placeholder="Nome da equipe" style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:12px;padding:12px">
+      <button class="btn purple">Inscrever equipe</button>
+    </form>
+    <p class="suave">Você será o capitão e poderá convidar os jogadores depois. A inscrição fica pendente até o organizador confirmar.</p>
+    {% endif %}
+
+    {% if k.sou_gestor %}
+    <h3 style="margin-top:22px">Gestão do campeonato</h3>
+    <form method="post" action="/campeonatos/{{ k.id }}/status" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <select name="status" style="border:1px solid var(--border);border-radius:12px;padding:10px">
+        {% for v, n in (('aberto','Inscrições abertas'),('em_andamento','Em andamento'),('encerrado','Encerrado'),('cancelado','Cancelado')) %}<option value="{{ v }}" {{ 'selected' if k.status == v }}>{{ n }}</option>{% endfor %}
+      </select><button class="btn soft">Atualizar situação</button>
+    </form>
+    <p class="suave">Tabelas, grupos, confrontos e classificação entram na próxima fase do projeto.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Equipes ({{ k.equipes_lista|length }})</h2>
+    {% if k.equipes_lista %}
+    <div class="pessoas">
+      {% for e in k.equipes_lista %}
+      <div class="card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>{{ e.nome }}</b><span class="tag {{ 'verde' if e.status == 'confirmada' else 'laranja' }}">{{ 'Confirmada' if e.status == 'confirmada' else 'Pendente' }}</span></div>
+        <div class="suave">Capitão: {{ e.capitao }} • {{ e.membros|selectattr('status', 'equalto', 'confirmado')|list|length }}/{{ k.atletas_por_equipe }} atletas</div>
+        <div class="pessoas" style="margin-top:8px">
+          {% for m in e.membros %}<div class="pessoa"><span class="avatar pequeno">{{ m.iniciais }}</span><span>{{ m.arroba }}</span>{% if m.status == 'convidado' %}<span class="tag cinza">convidado</span>{% endif %}</div>{% endfor %}
+        </div>
+        {% if e.capitao_id == usuario.id and e.status in ('pendente', 'confirmada') %}
+        <form method="post" action="/equipes/{{ e.id }}/convidar" style="display:flex;gap:6px;margin-top:10px" class="convite">
+          <input type="hidden" name="usuario_id" value="">
+          <input class="busca-atleta" placeholder="Convidar pelo @usuario" list="atletas-{{ e.id }}" autocomplete="off" style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px">
+          <datalist id="atletas-{{ e.id }}"></datalist>
+          <button class="btn soft pequeno">Convidar</button>
+        </form>
+        <form method="post" action="/equipes/{{ e.id }}/cancelar" onsubmit="return confirm('Cancelar a inscrição da equipe?')" style="margin-top:6px"><button class="link-botao" style="color:var(--red)">Cancelar inscrição</button></form>
+        {% endif %}
+        {% if k.sou_gestor and e.status == 'pendente' %}
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <form method="post" action="/equipes/{{ e.id }}/decidir"><input type="hidden" name="confirmar" value="1"><button class="btn purple pequeno">Confirmar inscrição</button></form>
+          <form method="post" action="/equipes/{{ e.id }}/decidir"><input type="hidden" name="confirmar" value="0"><button class="btn perigo pequeno">Recusar</button></form>
+        </div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}{{ c.vazio('Nenhuma equipe inscrita ainda.') }}{% endif %}
+  </div>
+</div>
+<script>
+  // Convite: busca pelo nome e guarda o id escolhido no campo oculto do formulário
+  document.querySelectorAll('.convite').forEach((f) => {
+    const campo = f.querySelector('.busca-atleta'), oculto = f.querySelector('[name=usuario_id]'), lista = f.querySelector('datalist');
+    let achados = [];
+    campo.addEventListener('input', async () => {
+      oculto.value = (achados.find((a) => a.arroba === campo.value || a.usuario === campo.value.replace(/^@/, '')) || {}).id || '';
+      if (campo.value.length < 2) return;
+      const r = await fetch('/api/v1/atletas?q=' + encodeURIComponent(campo.value.replace(/^@/, '')));
+      achados = r.ok ? await r.json() : [];
+      lista.innerHTML = achados.map((a) => '<option value="' + a.arroba + '">').join('');
+      oculto.value = (achados.find((a) => a.arroba === campo.value || a.usuario === campo.value.replace(/^@/, '')) || {}).id || '';
+    });
+    f.addEventListener('submit', (e) => { if (!oculto.value) { e.preventDefault(); toast('Escolha um atleta da lista.'); } });
+  });
+</script>
+{% if k.mural_acesso %}
+<div class="section-title"><h2>💬 Mural do campeonato</h2></div>
+<p class="suave" style="margin:-6px 0 12px">Para inscritos e organização. O local das publicações é sempre o do campeonato.</p>
+<div style="max-width:760px"><div id="mural"></div></div>
+<script>window.addEventListener('load', () => montarMural('mural', { escopo: 'campeonato', escopoId: {{ k.id }} }));</script>
+{% if k.sou_gestor %}
+<div class="panel" style="margin-top:18px;max-width:760px"><h2>Quem cuida do mural</h2><p class="suave">Quem organiza o campeonato modera o mural; indique outras pessoas para ajudar.</p>
+  <div class="moderadores" data-escopo="campeonato" data-id="{{ k.id }}" data-atual='{{ k.moderadores|tojson }}'></div></div>
+{% endif %}
+{% else %}
+<div class="section-title"><h2>💬 Mural do campeonato</h2></div><p class="vazio">O mural é exclusivo das equipes inscritas e da organização.</p>
+{% endif %}
+{% endblock %}

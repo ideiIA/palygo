@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ titulo }} · PlayGo</title>
+  <meta name="theme-color" content="#6c4cff">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body style="background:var(--bg)">
+  <main style="max-width:780px;margin:0 auto;padding:28px 18px 60px">
+    <a class="logo" href="/" style="color:var(--ink);margin:0 0 18px">Play<span style="color:var(--purple)">Go</span></a>
+    <div class="abas">
+      <a href="/termos" class="{{ 'ativa' if doc == 'termos' }}">Termos de Uso</a>
+      <a href="/politica-de-privacidade" class="{{ 'ativa' if doc == 'politica' }}">Política de Privacidade</a>
+    </div>
+    <h1 style="font-size:30px">{{ titulo }}</h1>
+    <p class="suave">Versão {{ versao }}</p>
+    {% for sec in secoes %}
+    <section class="panel" style="margin-top:14px">
+      <h2 style="font-size:18px">{{ sec.titulo }}</h2>
+      {% for par in sec.paragrafos %}<p style="line-height:1.6;margin:8px 0 0">{{ par }}</p>{% endfor %}
+    </section>
+    {% endfor %}
+    <p style="margin-top:22px">{% if usuario %}<a class="btn soft" href="/">Voltar ao app</a> <a class="btn soft" href="/privacidade">Meus dados e privacidade</a>{% else %}<a class="btn soft" href="/entrar">Entrar</a>{% endif %}</p>
+  </main>
+</body>
+</html>

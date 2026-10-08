@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>PlayGo</title>
+  <meta name="theme-color" content="#6c4cff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="/static/mural.css">
+</head>
+<body>
+  <header id="topo" hidden>
+    <a class="marca" href="#/">Play<span>Go</span></a>
+    <div class="topo-acoes">
+      <a class="icone" href="#/feed" aria-label="Feed" title="Feed">✎</a>
+      <button id="loc" class="icone" aria-label="Minha localização" title="Usar minha localização">📍</button>
+      <a class="icone sino" href="#/notificacoes" aria-label="Notificações">🔔<b id="sino" hidden></b></a>
+    </div>
+  </header>
+  <main id="view" aria-live="polite"></main>
+  <nav id="abas" hidden aria-label="Principal">
+    <a href="#/" data-aba="inicio"><i>⌂</i>Início</a>
+    <a href="#/explorar" data-aba="explorar"><i>⌖</i>Explorar</a>
+    <a href="#/criar" data-aba="criar" class="central"><i>＋</i>Criar</a>
+    <a href="#/grupos" data-aba="grupos"><i>◎</i>Grupos</a>
+    <a href="#/perfil" data-aba="perfil"><i>☺</i>Perfil</a>
+  </nav>
+  <div id="toast" role="status"></div>
+  <div id="folha" hidden></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+  <script src="/static/mural.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>

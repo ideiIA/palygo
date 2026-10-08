@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% import "_cards.html" as c %}
+{% block titulo %}Criar atividade — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>Criar nova atividade</h2></div>
+<form class="panel" method="post" action="/atividades">
+  <input type="hidden" name="quadra_id" value="{{ v.quadra_id or '' }}">
+  <div class="form-grid">
+    <div class="field"><label for="modalidade_id">Modalidade</label>
+      <select name="modalidade_id" id="modalidade_id" required onchange="aoTrocarModalidade(this)">
+        {% for m in modalidades %}<option value="{{ m.id }}" data-vagas="{{ m.vagas_padrao }}" data-quadra="{{ 1 if m.usa_quadra else 0 }}" {{ 'selected' if v.modalidade_id == m.id }}>{{ m.icone }} {{ m.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="nome">Nome da atividade</label><input name="nome" id="nome" required maxlength="150" placeholder="Ex.: Futebol de quarta" value="{{ v.nome or '' }}"></div>
+    <div class="field"><label for="data">Data</label><input type="date" name="data" id="data" required min="{{ hoje }}" value="{{ v.data or '' }}"></div>
+    <div class="field"><label for="hora">Horário</label><input type="time" name="hora" id="hora" required value="{{ v.hora or '' }}"></div>
+
+    <div class="field full" id="bloco-arena"><label for="arena_id">Arena <span class="suave">(opcional — atividades como corrida e ciclismo usam um ponto de encontro)</span></label>
+      <select name="arena_id" id="arena_id" onchange="aoTrocarArena(this)">
+        <option value="">Sem arena — informar o local abaixo</option>
+        {% for a in arenas %}<option value="{{ a.id }}" data-lat="{{ a.latitude }}" data-lng="{{ a.longitude }}" {{ 'selected' if v.arena_id == a.id|string }}>{{ a.nome }}{% if a.distancia %} — {{ a.distancia }}{% endif %}</option>{% endfor %}
+      </select></div>
+    <div class="field full"><label for="local_nome">Local ou ponto de encontro</label><input name="local_nome" id="local_nome" placeholder="Digite a arena, quadra, parque ou endereço" value="{{ v.local_nome or '' }}"></div>
+    {{ c.seletor_local(centro, v.latitude or '', v.longitude or '') }}
+    <div class="field full" id="bloco-percurso" style="display:none"><label for="percurso">Percurso <span class="suave">(opcional)</span></label><input name="percurso" id="percurso" placeholder="Ex.: duas voltas no parque, 7 km"></div>
+
+    <div class="field"><label for="max_participantes">Quantidade de participantes</label><input type="number" name="max_participantes" id="max_participantes" min="2" max="500" value="{{ v.max_participantes or 12 }}" required></div>
+    <div class="field"><label for="nivel">Nível</label>
+      <select name="nivel" id="nivel"><option value="todos">Todos</option>{% for k, n in niveis %}<option value="{{ k }}" {{ 'selected' if v.nivel == k }}>{{ n }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="valor">Valor por pessoa (R$)</label><input name="valor" id="valor" inputmode="decimal" placeholder="0,00" value="{{ v.valor or '' }}"></div>
+    <div class="field full"><label for="visibilidade">Quem pode participar</label>
+      <select name="visibilidade" id="visibilidade" onchange="dicaVisibilidade(this)">
+        <option value="publica">Pública — qualquer pessoa se inscreve (aparece na busca e no mapa)</option>
+        <option value="autorizados" {{ 'selected' if v.exige_aprovacao }}>Só autorizados — aparece na busca, mas você aprova cada pessoa</option>
+        <option value="link">Só por link — não aparece em lugar nenhum; entra quem receber o link (como num grupo de WhatsApp)</option>
+      </select>
+      <span class="suave" id="dica-vis"></span></div>
+    <div class="field"><label for="categoria">Categoria</label>
+      <select name="categoria" id="categoria">{% for k, n in categorias %}<option value="{{ k }}" {{ 'selected' if v.categoria == k }}>{{ n }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="duracao_min">Duração (minutos)</label><input type="number" name="duracao_min" id="duracao_min" min="15" max="720" value="{{ v.duracao_min or 90 }}"></div>
+    <div class="field"><label for="idade_min">Idade mínima <span class="suave">(opcional)</span></label><input type="number" name="idade_min" id="idade_min" min="5" max="100" value="{{ v.idade_min or '' }}"></div>
+    <div class="field"><label for="idade_max">Idade máxima <span class="suave">(opcional)</span></label><input type="number" name="idade_max" id="idade_max" min="5" max="100" value="{{ v.idade_max or '' }}"></div>
+    {% if meus_grupos %}
+    <div class="field full"><label for="grupo_id">Grupo <span class="suave">(opcional — avisa os membros)</span></label>
+      <select name="grupo_id" id="grupo_id"><option value="">Atividade aberta, sem grupo</option>{% for g in meus_grupos %}<option value="{{ g.id }}" {{ 'selected' if v.grupo_id == g.id|string }}>{{ g.nome }}</option>{% endfor %}</select></div>
+    {% endif %}
+    <div class="field full"><label for="descricao">Descrição</label><textarea name="descricao" id="descricao" placeholder="Conte como vai ser">{{ v.descricao or '' }}</textarea></div>
+    <div class="field full"><label for="regras">Regras</label><textarea name="regras" id="regras" placeholder="Ex.: chegar 10 min antes, levar camisa de cor diferente">{{ v.regras or '' }}</textarea></div>
+    <div class="field full"><label class="rotulo" style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="falta_gente" value="1" style="width:auto" {{ 'checked' if v.falta_gente }}> 🔥 Falta gente — destacar a atividade e avisar atletas compatíveis por perto</label></div>
+  </div>
+  <br><button class="btn purple">Publicar atividade</button>
+</form>
+<script>
+  function aoTrocarModalidade(sel) {
+    const o = sel.selectedOptions[0];
+    const usaQuadra = o.dataset.quadra === '1';
+    document.getElementById('bloco-percurso').style.display = usaQuadra ? 'none' : '';
+    const campo = document.getElementById('max_participantes');
+    if (!campo.dataset.mexido) campo.value = o.dataset.vagas;
+  }
+  document.getElementById('max_participantes').addEventListener('input', (e) => (e.target.dataset.mexido = 1));
+  function aoTrocarArena(sel) {
+    const o = sel.selectedOptions[0];
+    if (!o.dataset.lat) return;
+    const local = document.getElementById('local_nome');
+    if (!local.value) local.value = o.textContent.split(' — ')[0].trim();
+    if (window._seletor) window._seletor.por(+o.dataset.lat, +o.dataset.lng, true);
+  }
+  function dicaVisibilidade(sel) {
+    const d = {
+      publica: 'O mural da atividade é só dos participantes; você escolhe, post a post, se quer mostrar no feed geral.',
+      autorizados: 'Depois de criar, você também pode convidar pessoas pelo @usuario — o convite dispensa a aprovação. Os posts não vão para o feed geral.',
+      link: 'Depois de criar, você recebe o link para compartilhar. Ninguém é avisado nem encontra a atividade na busca. Os posts não vão para o feed geral.'
+    };
+    document.getElementById('dica-vis').textContent = d[sel.value];
+  }
+  dicaVisibilidade(document.getElementById('visibilidade'));
+  aoTrocarModalidade(document.getElementById('modalidade_id'));
+</script>
+{% endblock %}

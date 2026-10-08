@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_cards.html" as k %}
+{% block titulo %}Convites — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>✉️ Convites</h2></div>
+{% if convites %}
+<div class="panel"><div class="pessoas">
+  {% for c in convites %}
+  <div class="pessoa" style="flex-wrap:wrap">
+    <div><b>{{ c.titulo }}</b><div class="suave">{{ 'Atividade' if c.escopo == 'atividade' else 'Comunidade' }} · convidado por {{ c.de }}</div></div>
+    <span class="acoes">
+      <a class="btn soft pequeno" href="{{ c.link }}">Ver</a>
+      <form method="post" action="/convites/{{ c.id }}/responder"><input type="hidden" name="aceitar" value="1"><button class="btn purple pequeno">Aceitar</button></form>
+      <form method="post" action="/convites/{{ c.id }}/responder"><input type="hidden" name="aceitar" value="0"><button class="btn perigo pequeno">Recusar</button></form>
+    </span>
+  </div>
+  {% endfor %}
+</div></div>
+{% else %}{{ k.vazio('Nenhum convite pendente.') }}{% endif %}
+{% endblock %}

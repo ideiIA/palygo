@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_cards.html" as c %}
+{% block titulo %}Campeonatos — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>Campeonatos em destaque 🏆</h2><a class="btn purple" href="/campeonatos/novo">+ Criar campeonato</a></div>
+
+<form class="filtros" method="get">
+  <div class="campo"><label>Esporte</label>
+    <select name="modalidades"><option value="">Todos</option>{% for m in modalidades %}<option value="{{ m.codigo }}" {{ 'selected' if m.codigo in f.modalidades }}>{{ m.icone }} {{ m.nome }}</option>{% endfor %}</select></div>
+  <div class="campo"><label>Distância</label>
+    <select name="raio">{% for r in (5, 10, 20, 50) %}<option value="{{ r }}" {{ 'selected' if f.raio_km == r }}>Até {{ r }} km</option>{% endfor %}<option value="0" {{ 'selected' if not f.raio_km }}>Toda a cidade</option></select></div>
+  <div class="campo"><label>Período</label>
+    <select name="quando"><option value="">Qualquer</option><option value="fim_de_semana" {{ 'selected' if f.quando == 'fim_de_semana' }}>Neste fim de semana</option></select></div>
+  <div class="campo" style="flex:0 0 auto"><label>&nbsp;</label><label style="text-transform:none;display:flex;gap:6px;align-items:center;font-size:14px;color:var(--ink)"><input type="checkbox" name="com_vagas" value="1" style="width:auto" {{ 'checked' if f.com_vagas }}> Só inscrições abertas</label></div>
+  <div class="campo" style="flex:0 0 auto"><label>&nbsp;</label><button class="btn purple">Filtrar</button></div>
+</form>
+
+{% if lista %}<div class="grid">{% for x in lista %}{{ c.campeonato(x, loop.first and not f.modalidades) }}{% endfor %}</div>
+{% else %}{{ c.vazio('Nenhum campeonato encontrado com esses filtros.') }}{% endif %}
+{% endblock %}

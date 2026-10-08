@@ -1,0 +1,57 @@
+# CLAUDE.md
+
+Orientação para trabalhar neste repositório. Leia o `README.md` para o funcionamento; aqui ficam as regras.
+
+## Padrão do projeto
+
+PlayGo segue o padrão do **Licitações** (`C:\Projetos\Licitações`): pacote Python único (`playgo/`), FastAPI + Jinja,
+SQLAlchemy 2 + psycopg 3, pydantic-settings, CLI `python -m playgo`, Postgres de desenvolvimento isolado
+(`scripts\dev_db.ps1`, porta **5434**, não use 5432/5433), testes com banco próprio. Não introduza Alembic, Celery,
+ORM alternativo ou framework de front sem pedido explícito.
+
+- **Idioma:** código, tabelas, rotas e mensagens em português do Brasil (como no Licitações). Mensagens de `ErroNegocio` já vão
+  prontas para a tela.
+- **Regra de negócio fica em serviços** (`vagas.py`, `arenas.py`, …), nunca em rota ou template. `web/app.py` e `api/v1.py`
+  só traduzem HTTP ↔ serviço. Serializadores (`serializadores.py`, `detalhes.py`) são compartilhados pelo site e pela API.
+- **Datas** são naïve no fuso do servidor (`db.agora()`, `PLAYGO_FUSO`), como no Licitações.
+- **Esquema:** `create_all` + `_COLUNAS_NOVAS` em `db.py` (`ALTER TABLE … IF NOT EXISTS`). Coluna nova = linha ali.
+- **Esporte novo** = linha em `modalidades` (RF-012), sem mudar código. `usa_quadra=False` leva a ponto de encontro.
+
+## Armadilhas já resolvidas — não desfaça
+
+- `Atividade.confirmados` só muda dentro de `vagas.py`, com a atividade travada por `vagas.travar()` (usa `with_for_update(of=Atividade)`
+  porque os joins eager são externos). Mexer nele fora disso reabre a corrida da última vaga.
+- Reserva de quadra trava a linha da quadra (`arenas.reservar`). Atividade em quadra só por gestor ou por horário divulgado.
+- A sessão usa `expire_on_commit=False`: coleções relacionadas (`campeonato.equipes`) podem estar velhas dentro da mesma sessão.
+  Para decidir regra (vagas, nome repetido), **consulte o banco**, como `campeonatos.equipes_ativas`.
+- Aviso duplicado é evitado por `Notificacao.chave` (UNIQUE por usuário) com `begin_nested`; sempre passe `chave` em avisos recorrentes.
+- A API aceita token Bearer **ou** cookie de sessão; POSTs por cookie dependem de `SameSite=lax`.
+
+- **Mural/moderação** (`publicacoes.py`, `escopos.py`, `moderacao.py`, `midia.py`): só o autor edita; exclusão na 1ª hora; ocultar vale em
+  todos os lugares e só admin restaura o que admin ocultou; tudo entra `em_analise`; falha da IA **nunca** libera. Permissão de mural
+  (ler/postar/moderar) vive em `escopos.py` — não replique `if` de permissão em rota ou template.
+- **Perfis**: `Usuario.admin` e `Usuario.moderador`; use `u.equipe_moderacao` (admin ou moderador geral) para permissões de moderação e `u.admin` só para
+  gerir usuários/perfis. Quem oculta fica em `oculta_por_papel` (`admin` > `moderacao` > `moderador`) e só o mesmo nível ou acima restaura.
+- **Auditoria** (`auditoria.registrar`): toda ação de usuário que mude estado grava um `Registro` (a tabela é só de inserção, com gatilho no
+  Postgres). Ação nova de serviço = uma linha de `registrar`. Nunca UPDATE/DELETE em `registros`; a purga é `privacidade.purgar`.
+- **Pessoas aparecem pelo `@usuario`** (nunca nome real/e-mail) em murais, comunidades, buscas e convites.
+- **Localização do perfil só com consentimento** (`consent_localizacao`); sem ele a API recusa guardar lat/lng.
+- **Termos**: mudar `termos.VERSAO` obriga todos a aceitar de novo (portão em `deps.py`).
+- O `mural.js`/`mural.css` são compartilhados pelo site e pelo PWA; o PWA carrega os dois de `/static/`.
+
+## Comandos
+
+```powershell
+.\scripts\dev_db.ps1 start
+.venv\Scripts\python -m playgo demo --refazer   # apaga e recria os dados de demonstração
+.venv\Scripts\python -m playgo web              # http://localhost:8010  (site /, app /app/, API /api/v1)
+.venv\Scripts\python -m pytest tests
+.venv\Scripts\python scripts\gerar_icones.py    # regenera os ícones PNG do PWA
+.venv\Scripts\python -m playgo purgar         # elimina registros/publicações excluídas além do prazo de guarda
+```
+
+## Fases do projeto (docs §15)
+
+MVP + protótipo estão feitos. **Fase 2:** reserva e agenda com reserva pelo app. **Fase 3:** pagamento, gestão completa de
+campeonato (tabelas/confrontos/classificação — RF-009), ranking, avaliações/reputação (seção 11), monetização. Push no
+aparelho também está pendente. Mural, comunidades e LGPD: ver `docs/lgpd.md` (inclui o que depende do jurídico). Veja `docs/rastreabilidade.md`.

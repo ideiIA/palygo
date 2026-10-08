@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titulo %}Administração — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>⚙ Administração — perfis de acesso</h2></div>
+<div class="stats" id="resumo" style="margin-bottom:18px"></div>
+<div class="panel" style="margin-bottom:18px">
+  <h2>O que cada perfil faz</h2>
+  <div class="pessoas">
+    <div class="pessoa"><span class="tag roxo">Administrador</span><span>Tudo: gerir usuários e perfis, aprovar a fila de moderação, ocultar e restaurar em qualquer mural. Sempre existe pelo menos um.</span></div>
+    <div class="pessoa"><span class="tag verde">Moderador geral</span><span>Vê e decide a fila de moderação e oculta conteúdo em qualquer mural. Não gere usuários nem perfis e não desfaz o que um administrador ocultou.</span></div>
+    <div class="pessoa"><span class="tag cinza">Usuário</span><span>Comum. Organizadores e donos de comunidade moderam os próprios murais, sem precisar de perfil especial.</span></div>
+  </div>
+  <p class="suave" style="margin-top:10px">Ninguém — nem administrador — edita o texto de outra pessoa. Toda mudança de perfil fica registrada na trilha de auditoria e a pessoa é avisada.</p>
+</div>
+<form class="filtros" id="filtros">
+  <div class="campo"><label>Buscar</label><input name="q" placeholder="@usuario, nome ou e-mail"></div>
+  <div class="campo"><label>Perfil</label><select name="perfil"><option value="">Todos</option><option value="admin">Administradores</option><option value="moderador">Moderadores gerais</option><option value="usuario">Usuários</option></select></div>
+  <div class="campo" style="flex:0 0 auto"><label>&nbsp;</label><button class="btn purple">Buscar</button></div>
+</form>
+<div class="panel"><div class="pessoas" id="lista"><p class="suave">Carregando…</p></div></div>
+<script>
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const PERFIS = { usuario: 'Usuário', moderador: 'Moderador geral', admin: 'Administrador' };
+  async function carregar() {
+    const f = document.getElementById('filtros');
+    const q = new URLSearchParams({ q: f.q.value, perfil: f.perfil.value }).toString();
+    try {
+      const r = await webApi('/admin/usuarios?' + q);
+      document.getElementById('resumo').innerHTML = `<div class="stat"><b>${r.resumo.administradores}</b><span>Administradores</span></div><div class="stat"><b>${r.resumo.moderadores}</b><span>Moderadores gerais</span></div><div class="stat"><b>${r.resumo.usuarios}</b><span>Usuários ativos</span></div>`;
+      document.getElementById('lista').innerHTML = r.itens.map((i) => `<div class="pessoa" style="flex-wrap:wrap"><span class="avatar pequeno">${i.foto_url ? `<img src="${esc(i.foto_url)}" alt="">` : esc(i.iniciais)}</span>
+        <div><b>${esc(i.arroba)}</b>${i.id === PLAYGO.eu.id ? ' <span class="tag roxo">você</span>' : ''}<div class="suave">${esc(i.nome)} · ${esc(i.email)}</div></div>
+        <span class="acoes"><select data-id="${i.id}" style="border:1px solid var(--border);border-radius:10px;padding:8px">${Object.entries(PERFIS).map(([k, n]) => `<option value="${k}" ${i.perfil === k ? 'selected' : ''}>${n}</option>`).join('')}</select></span></div>`).join('') || '<p class="suave">Ninguém encontrado.</p>';
+    } catch (e) { document.getElementById('lista').innerHTML = `<p class="vazio">${esc(e.message)}</p>`; }
+  }
+  document.getElementById('filtros').addEventListener('submit', (ev) => { ev.preventDefault(); carregar(); });
+  document.addEventListener('change', async (ev) => {
+    const sel = ev.target.closest('select[data-id]');
+    if (!sel) return;
+    if (sel.value === 'admin' && !confirm('Tornar esta pessoa ADMINISTRADORA? Ela poderá gerir usuários e perfis e moderar tudo.')) return carregar();
+    try { await webApi('/admin/usuarios/' + sel.dataset.id + '/perfil', { metodo: 'POST', corpo: { perfil: sel.value } }); toast('Perfil atualizado.'); } catch (e) { toast(e.message); }
+    carregar();
+  });
+  window.addEventListener('load', carregar);
+</script>
+{% endblock %}

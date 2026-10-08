@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% import "_cards.html" as c %}
+{% block titulo %}Explorar — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>Explorar esportes próximos</h2></div>
+
+<div class="matchbox" style="margin-bottom:20px">
+  <h2>🎯 Encontramos oportunidades para você</h2>
+  <p>Com base nos seus esportes, distância, nível e horário preferido.</p>
+  <div class="matchchips">
+    <span>📍 {{ 'até ' ~ f.raio_km|int ~ ' km' if f.raio_km else 'toda a cidade' }}</span>
+    {% for e in usuario.esportes[:3] %}<span>{{ e.modalidade.icone }} {{ e.modalidade.nome }}</span>{% endfor %}
+    <span>🔥 {{ 'com vagas' if f.com_vagas else 'todas' }}</span>
+    {% if f.quando %}<span>⏱ {{ {'hoje':'hoje','amanha':'amanhã','fim_de_semana':'fim de semana'}[f.quando] }}</span>{% endif %}
+  </div>
+  <a class="btn lime" href="/perfil">Ajustar preferências</a>
+  {% if not res.centro.informada %}<button class="btn soft" data-localizar style="margin-left:8px">📍 Usar minha localização</button>{% endif %}
+</div>
+
+<form class="filtros" method="get" action="/explorar">
+  <div class="campo"><label>Buscar</label><input name="q" value="{{ f.q }}" placeholder="esporte, arena, local"></div>
+  <div class="campo"><label>Esporte</label>
+    <select name="modalidades"><option value="">Todos</option>
+      {% for m in modalidades %}<option value="{{ m.codigo }}" {{ 'selected' if m.codigo in f.modalidades }}>{{ m.icone }} {{ m.nome }}</option>{% endfor %}
+    </select></div>
+  <div class="campo"><label>Distância</label>
+    <select name="raio">{% for r in (2, 5, 10, 20) %}<option value="{{ r }}" {{ 'selected' if f.raio_km == r }}>Até {{ r }} km</option>{% endfor %}<option value="0" {{ 'selected' if not f.raio_km }}>Toda a cidade</option></select></div>
+  <div class="campo"><label>Quando</label>
+    <select name="quando"><option value="">Qualquer dia</option><option value="hoje" {{ 'selected' if f.quando == 'hoje' }}>Hoje</option><option value="amanha" {{ 'selected' if f.quando == 'amanha' }}>Amanhã</option><option value="fim_de_semana" {{ 'selected' if f.quando == 'fim_de_semana' }}>Fim de semana</option></select></div>
+  <div class="campo"><label>Horário</label>
+    <select name="periodo"><option value="">Qualquer</option><option value="manha" {{ 'selected' if f.periodo == 'manha' }}>Manhã</option><option value="tarde" {{ 'selected' if f.periodo == 'tarde' }}>Tarde</option><option value="noite" {{ 'selected' if f.periodo == 'noite' }}>Noite</option></select></div>
+  <div class="campo"><label>Nível</label>
+    <select name="nivel"><option value="">Todos</option>{% for v, n in niveis %}<option value="{{ v }}" {{ 'selected' if f.nivel == v }}>{{ n }}</option>{% endfor %}</select></div>
+  <div class="campo"><label>Valor</label>
+    <select name="preco"><option value="">Gratuito ou pago</option><option value="gratis" {{ 'selected' if f.preco == 'gratis' }}>Gratuito</option><option value="pago" {{ 'selected' if f.preco == 'pago' }}>Pago</option></select></div>
+  <div class="campo" style="flex:0 0 auto"><label>&nbsp;</label><label style="text-transform:none;display:flex;gap:6px;align-items:center;font-size:14px;color:var(--ink)"><input type="checkbox" name="com_vagas" value="1" style="width:auto" {{ 'checked' if f.com_vagas }}> Com vagas</label></div>
+  <div class="campo" style="flex:0 0 auto"><label>&nbsp;</label><button class="btn purple">Filtrar</button></div>
+</form>
+
+<div class="two">
+  <div id="mapa" class="map alto"></div>
+  <div class="panel">
+    <h2>Mais próximos</h2>
+    <div class="lista-lateral">
+      {% for a in res.atividades[:12] %}{{ c.atividade_curta(a) }}{% endfor %}
+      {% for h in res.horarios[:4] %}{{ c.horario(h) }}{% endfor %}
+      {% if not res.atividades and not res.horarios %}{{ c.vazio('Nenhuma atividade com esses filtros. Tente aumentar a distância.') }}{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if res.atividades %}
+<div class="section-title"><h2>Atividades ({{ res.atividades|length }})</h2>
+  <div class="chips">
+    {% for v, n in (('relevancia', 'Mais urgentes'), ('distancia', 'Mais perto'), ('horario', 'Mais cedo')) %}
+    <a class="chip {{ 'ativo' if f.ordem == v }}" href="?{{ qs_sem_ordem }}&ordem={{ v }}">{{ n }}</a>{% endfor %}
+  </div>
+</div>
+<div class="grid">{% for a in res.atividades %}{{ c.atividade(a) if not a.falta_gente else c.urgente(a) }}{% endfor %}</div>
+{% endif %}
+
+{% if res.campeonatos %}
+<div class="section-title"><h2>🏆 Campeonatos</h2></div>
+<div class="grid">{% for x in res.campeonatos %}{{ c.campeonato(x) }}{% endfor %}</div>
+{% endif %}
+{% if res.grupos %}
+<div class="section-title"><h2>👥 Grupos</h2></div>
+<div class="grid">{% for g in res.grupos %}{{ c.grupo(g) }}{% endfor %}</div>
+{% endif %}
+{% if res.arenas %}
+<div class="section-title"><h2>🏟️ Arenas</h2></div>
+<div class="grid">{% for a in res.arenas %}{{ c.arena(a) }}{% endfor %}</div>
+{% endif %}
+
+<script>
+  window.addEventListener('load', () => mapaPontos('mapa', {{ res.centro|tojson }}, {{ res.pontos|tojson }}));
+</script>
+{% endblock %}

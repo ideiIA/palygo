@@ -1,0 +1,59 @@
+/* Mural (publicações e comentários) — compartilhado pelo site e pelo app. Usa as variáveis de cor de cada lado. */
+.mu { --mu-roxo: var(--purple, #6c4cff); --mu-rosa: var(--pink, #ff3d81); --mu-borda: var(--border, #e9eaf0); --mu-suave: var(--muted, #667085); display: grid; gap: 14px; }
+.mu-titulo { font-size: 20px; margin: 0; }
+.mu-compor { background: #fff; border: 1px solid var(--mu-borda); border-radius: 18px; padding: 14px; display: grid; gap: 10px; }
+.mu-compor textarea { border: 1px solid var(--mu-borda); border-radius: 12px; padding: 12px; font: inherit; resize: vertical; width: 100%; background: #fafbfc; min-height: 76px; }
+.mu-compor textarea:focus, .mu-nome-local:focus { outline: 0; border-color: var(--mu-roxo); background: #fff; }
+.mu-local { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mu-nome-local { flex: 1; min-width: 160px; border: 1px solid var(--mu-borda); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 13px; background: #fafbfc; }
+.mu-barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.mu-barra [data-enviar] { margin-left: auto; }
+.mu-rep { font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; }
+.mu-nota { font-size: 12px; color: var(--mu-suave); margin: 0; }
+.mu-chip { display: inline-block; padding: 6px 10px; border-radius: 20px; background: #f0edff; color: var(--mu-roxo); font-size: 12px; font-weight: 800; }
+.mu-chip.ok { background: #e6fbf2; color: #008f5b; }
+.mu-chip.falta { background: #fff0df; color: #d96a00; }
+.mu-btn { border: 0; border-radius: 12px; padding: 10px 16px; background: var(--mu-roxo); color: #fff; font: inherit; font-weight: 800; font-size: 14px; cursor: pointer; display: inline-block; }
+.mu-btn.cinza { background: #f0edff; color: var(--mu-roxo); }
+.mu-btn.peq { padding: 7px 11px; font-size: 13px; border-radius: 10px; }
+.mu-btn:disabled { opacity: .6; cursor: default; }
+.mu-anexos { display: flex; flex-wrap: wrap; gap: 6px; }
+.mu-anexo { background: #f3f4f8; border-radius: 10px; padding: 5px 9px; font-size: 12px; font-weight: 700; }
+.mu-anexo button { border: 0; background: none; cursor: pointer; color: var(--mu-suave); }
+.mu-post { background: #fff; border: 1px solid var(--mu-borda); border-radius: 18px; padding: 14px; display: grid; gap: 10px; }
+.mu-post.st-em_analise { border-style: dashed; border-color: #ffd48a; }
+.mu-post.st-oculta, .mu-post.st-rejeitada { background: #fafafa; opacity: .85; }
+.mu-post > header { display: flex; gap: 10px; align-items: center; }
+.mu-av { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--orange, #ff8a00), var(--mu-rosa)); color: #fff; font-weight: 900; font-size: 13px; display: grid; place-items: center; flex: none; }
+.mu-av.peq { width: 28px; height: 28px; font-size: 11px; }
+.mu-meta { font-size: 12px; color: var(--mu-suave); font-weight: 600; }
+.mu-meta button, .mu-acoes button { border: 0; background: none; padding: 0; font: inherit; color: var(--mu-roxo); font-weight: 800; cursor: pointer; font-size: inherit; }
+.mu-ed { font-style: italic; }
+.mu-origem { font-weight: 800; font-size: 13px; color: var(--mu-roxo); text-decoration: none; }
+.mu-tag { display: inline-block; font-size: 11px; font-weight: 800; background: #f0edff; color: var(--mu-roxo); border-radius: 10px; padding: 2px 7px; }
+.mu-tag.am { background: #fff6dd; color: #8a5a00; } .mu-tag.vm { background: #ffe9ea; color: #b42318; }
+.mu-aviso { border-radius: 12px; padding: 9px 12px; font-size: 13px; font-weight: 600; }
+.mu-aviso.em { background: #fff6dd; color: #8a5a00; } .mu-aviso.oc { background: #ffe9ea; color: #b42318; }
+.mu-texto { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+.mu-midias { display: grid; gap: 6px; border-radius: 14px; overflow: hidden; }
+.mu-midias.n1 { grid-template-columns: 1fr; } .mu-midias.n2, .mu-midias.n3, .mu-midias.n4 { grid-template-columns: 1fr 1fr; }
+.mu-midias img, .mu-midias video { width: 100%; max-height: 420px; object-fit: cover; display: block; background: #000; border-radius: 10px; }
+.mu-midias.n1 img { object-fit: contain; background: #f3f4f8; }
+.mu-loc { font-size: 13px; font-weight: 700; color: var(--mu-suave); text-decoration: none; }
+.mu-acoes { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; border-top: 1px solid var(--mu-borda); padding-top: 9px; }
+.mu-coments { display: grid; gap: 10px; border-top: 1px solid var(--mu-borda); padding-top: 10px; }
+.mu-com-lista { display: grid; gap: 10px; }
+.mu-com { display: flex; gap: 8px; }
+.mu-com-corpo { background: #f3f4f8; border-radius: 14px; padding: 8px 12px; flex: 1; font-size: 14px; }
+.mu-com-texto { overflow-wrap: anywhere; }
+.mu-com-form { display: flex; gap: 8px; }
+.mu-com-form input { flex: 1; border: 1px solid var(--mu-borda); border-radius: 20px; padding: 9px 14px; font: inherit; background: #fff; }
+.mu-vazio { text-align: center; color: var(--mu-suave); padding: 22px 12px; background: #fff; border: 1px dashed #d8dae5; border-radius: 16px; margin: 0; }
+.mu-mais { justify-self: center; }
+.mu-fundo { position: fixed; inset: 0; background: #0006; z-index: 100; display: grid; place-items: center; padding: 16px; }
+.mu-dialogo { background: #fff; border-radius: 18px; padding: 18px; width: min(420px, 100%); display: grid; gap: 10px; }
+.mu-dialogo h3 { margin: 0; } .mu-dialogo p { margin: 0; color: var(--mu-suave); font-size: 14px; }
+.mu-dialogo select, .mu-dialogo textarea, .mu-post textarea { border: 1px solid var(--mu-borda); border-radius: 10px; padding: 10px; font: inherit; width: 100%; }
+.mu-dialogo-acoes { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+.mu-av { overflow: hidden; }
+.mu-av img { width: 100%; height: 100%; object-fit: cover; display: block; }

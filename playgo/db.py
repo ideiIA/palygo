@@ -1,0 +1,62 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+from .config import settings
+
+engine = create_engine(settings.database_url, pool_pre_ping=True)
+Session = sessionmaker(engine, expire_on_commit=False)
+
+_FUSO = ZoneInfo(settings.fuso)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def agora() -> datetime:
+    """Horário local do servidor, sem fuso — as datas das atividades são combinadas no relógio da cidade."""
+    return datetime.now(_FUSO).replace(tzinfo=None)
+
+
+# create_all não altera tabelas que já existem; colunas e índices acrescentados depois entram por aqui.
+_COLUNAS_NOVAS: tuple[str, ...] = (
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS usuario varchar(30)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_usuario ON usuarios (usuario)",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS termos_versao varchar(20)",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS termos_em timestamp",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS consent_localizacao boolean NOT NULL DEFAULT false",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS consent_localizacao_em timestamp",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS anonimizado_em timestamp",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS moderador boolean NOT NULL DEFAULT false",
+    "ALTER TABLE atividades ADD COLUMN IF NOT EXISTS visibilidade varchar(12) NOT NULL DEFAULT 'publica'",
+    "ALTER TABLE atividades ADD COLUMN IF NOT EXISTS convite_token varchar(40)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_atividades_convite ON atividades (convite_token)",
+    # Atividades que já exigiam aprovação passam a ser "só autorizados"
+    "UPDATE atividades SET visibilidade = 'autorizados' WHERE exige_aprovacao AND visibilidade = 'publica'",
+)
+
+# Os registros de interação só se acrescentam. A purga por prazo liga `playgo.purga` na própria transação.
+_GATILHO_REGISTROS = (
+    """CREATE OR REPLACE FUNCTION registros_somente_insercao() RETURNS trigger AS $$
+    BEGIN
+        IF TG_OP = 'DELETE' AND current_setting('playgo.purga', true) = 'on' THEN
+            RETURN OLD;
+        END IF;
+        RAISE EXCEPTION 'registros: a trilha de auditoria é somente de inserção';
+    END; $$ LANGUAGE plpgsql""",
+    "DROP TRIGGER IF EXISTS tg_registros_somente_insercao ON registros",
+    """CREATE TRIGGER tg_registros_somente_insercao BEFORE UPDATE OR DELETE ON registros
+    FOR EACH ROW EXECUTE FUNCTION registros_somente_insercao()""",
+)
+
+
+def criar_tabelas() -> None:
+    from . import models  # noqa: F401  (registra as tabelas)
+
+    Base.metadata.create_all(engine)
+    with engine.begin() as conexao:
+        for comando in _COLUNAS_NOVAS + _GATILHO_REGISTROS:
+            conexao.execute(text(comando))

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block titulo %}{{ c.nome }} — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="detalhe-topo">
+  <div>
+    <span class="tag {{ 'verde' if c.visibilidade == 'publica' else 'laranja' }}">{{ {'publica': 'Pública', 'autorizados': 'Só autorizados', 'link': 'Só por link'}[c.visibilidade] }}</span>
+    <h1>{{ c.nome }}</h1>
+    <div class="meta">{{ c.membros }} membro{{ 's' if c.membros != 1 }}{% if c.cidade %} • 📍 {{ c.cidade }}{% endif %}</div>
+    {% if c.descricao %}<p>{{ c.descricao }}</p>{% endif %}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    {% if c.meu_status == 'ativo' %}
+      {% if not c.sou_dono %}<form method="post" action="/comunidades/{{ c.id }}/sair" onsubmit="return confirm('Sair da comunidade?')"><button class="btn perigo">Sair</button></form>{% endif %}
+    {% elif c.meu_status == 'pendente' %}<span class="btn soft">Pedido enviado — aguardando aprovação</span>
+    {% elif c.visibilidade != 'link' %}<form method="post" action="/comunidades/{{ c.id }}/entrar"><button class="btn purple">{{ 'Pedir para entrar' if c.visibilidade == 'autorizados' else 'Entrar na comunidade' }}</button></form>{% endif %}
+  </div>
+</div>
+
+{% if c.regras %}<div class="panel" style="margin-bottom:18px"><h3 style="margin:0 0 6px">Regras da comunidade</h3><p style="margin:0;white-space:pre-line">{{ c.regras }}</p></div>{% endif %}
+
+<div class="two">
+  <div>
+    {% if c.pode_ler %}
+      <div id="mural"></div>
+      <script>window.addEventListener('load', () => montarMural('mural', { escopo: 'comunidade', escopoId: {{ c.id }}, titulo: 'Mural da comunidade' }));</script>
+    {% else %}
+      <p class="vazio">{{ 'O mural é só para membros.' if c.visibilidade != 'publica' else 'Você não pode ver este mural.' }}</p>
+    {% endif %}
+  </div>
+  <div>
+    {% if c.pendentes %}
+    <div class="panel" style="margin-bottom:18px"><h2>Pedidos para entrar ({{ c.pendentes|length }})</h2>
+      <div class="pessoas">{% for m in c.pendentes %}
+        <div class="pessoa"><span class="avatar pequeno">{{ m.iniciais }}</span><span class="nome">{{ m.arroba }}</span><span class="acoes">
+          <form method="post" action="/comunidades/{{ c.id }}/pedidos/{{ m.usuario_id }}"><input type="hidden" name="aprovar" value="1"><button class="btn purple pequeno">Aprovar</button></form>
+          <form method="post" action="/comunidades/{{ c.id }}/pedidos/{{ m.usuario_id }}"><input type="hidden" name="aprovar" value="0"><button class="btn perigo pequeno">Recusar</button></form></span></div>{% endfor %}</div></div>
+    {% endif %}
+    {% if c.sou_moderador %}
+    <div class="panel" style="margin-bottom:18px">
+      <h2>Convidar pelo @usuario</h2>
+      <div class="convidar" data-escopo="comunidade" data-id="{{ c.id }}"></div>
+      {% if c.link %}<h3 style="margin:16px 0 6px">Link de convite</h3>
+      <div style="display:flex;gap:6px"><input readonly value="{{ request.base_url }}{{ c.link.lstrip('/') }}" id="link-copia" style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px"><button class="btn soft pequeno" type="button" onclick="navigator.clipboard.writeText(document.getElementById('link-copia').value).then(() => toast('Link copiado!'))">Copiar</button></div>
+      <form method="post" action="/escopos/comunidade/{{ c.id }}/link/renovar" style="margin-top:8px" onsubmit="return confirm('Gerar um novo link? O atual deixa de funcionar.')"><button class="link-botao" style="color:var(--red)">Gerar novo link (derruba o atual)</button></form>{% endif %}
+    </div>
+    {% endif %}
+    {% if c.membros_lista %}
+    <div class="panel"><h2>Membros</h2>
+      <div class="pessoas">{% for m in c.membros_lista %}
+        <div class="pessoa"><span class="avatar pequeno">{{ m.iniciais }}</span><span class="nome">{{ m.arroba }}</span>
+          {% if m.papel != 'membro' %}<span class="tag roxo">{{ 'Dono' if m.papel == 'dono' else 'Moderador' }}</span>{% endif %}
+          {% if m.papel != 'dono' and c.sou_moderador %}<span class="acoes">
+            {% if c.sou_dono %}<form method="post" action="/comunidades/{{ c.id }}/membros/{{ m.usuario_id }}/papel"><input type="hidden" name="papel" value="{{ 'membro' if m.papel == 'moderador' else 'moderador' }}"><button class="link-botao">{{ 'Tirar moderação' if m.papel == 'moderador' else 'Tornar moderador' }}</button></form>{% endif %}
+            {% if m.papel == 'membro' %}<form method="post" action="/comunidades/{{ c.id }}/membros/{{ m.usuario_id }}/papel" onsubmit="return confirm('Banir {{ m.arroba }}?')"><input type="hidden" name="papel" value="banido"><button class="link-botao" style="color:var(--red)">Banir</button></form>{% endif %}</span>{% endif %}
+        </div>{% endfor %}</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

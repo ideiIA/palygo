@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Escolha seu @usuario · PlayGo</title>
+  <meta name="theme-color" content="#6c4cff">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="entrada">
+  <form class="cartao-entrada" method="post" action="/cadastro/completar">
+    <a class="logo" href="/">Play<span style="color:var(--purple)">Go</span></a>
+    <h1>Escolha seu nome de usuário</h1>
+    <p class="suave" style="margin:0">Ele aparece nas suas publicações e comentários, e é como outras pessoas vão te encontrar para enviar convites. Seu nome real não é mostrado nas publicações.</p>
+    {% if erro %}<p class="aviso erro" style="margin:0">{{ erro }}</p>{% endif %}
+    <label>Nome de usuário
+      <input name="nome_usuario" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_.]{3,20}" placeholder="ex.: carlos.cg" autocomplete="username" autofocus>
+    </label>
+    <p class="suave" style="margin:0">De 3 a 20 caracteres: letras, números, _ ou ponto.</p>
+    <button class="btn purple">Continuar</button>
+  </form>
+</body>
+</html>

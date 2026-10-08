@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ 'Criar conta' if modo == 'cadastro' else 'Entrar' }} · PlayGo</title>
+  <meta name="theme-color" content="#6c4cff">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="entrada">
+  <form class="cartao-entrada" method="post" action="{{ '/cadastro' if modo == 'cadastro' else '/entrar' }}">
+    <a class="logo" href="/">Play<span style="color:var(--purple)">Go</span></a>
+    {% if modo == 'cadastro' %}
+    <h1>Crie sua conta</h1>
+    <p class="suave" style="margin:0">Encontre onde jogar. Encontre com quem jogar. Grátis para atletas.</p>
+    {% else %}
+    <h1>Entrar</h1>
+    {% endif %}
+    {% if erro %}<p class="aviso erro" style="margin:0">{{ erro }}</p>{% endif %}
+    {% if modo == 'cadastro' %}
+    <label>Seu nome <input name="nome" value="{{ nome or '' }}" required autofocus autocomplete="name"></label>
+    <label>Nome de usuário <input name="usuario" value="{{ usuario or '' }}" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_.@]{3,21}" placeholder="ex.: carlos.cg" autocomplete="username"></label>
+    <p class="suave" style="margin:-6px 0 0">É o que aparece nas suas publicações e como as pessoas te encontram para convites.</p>
+    {% endif %}
+    <label>E-mail <input type="email" name="email" value="{{ email or '' }}" required autocomplete="{{ 'email' if modo == 'cadastro' else 'username' }}" {{ 'autofocus' if modo != 'cadastro' }}></label>
+    <label>Senha <input type="password" name="senha" required {% if modo == 'cadastro' %}minlength="8" autocomplete="new-password"{% else %}autocomplete="current-password"{% endif %}></label>
+    {% if modo == 'cadastro' %}
+    <p class="suave" style="margin:-6px 0 0">Mínimo de 8 caracteres.</p>
+    <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600;font-size:13px"><input type="checkbox" name="aceito_termos" value="1" required style="margin-top:3px">
+      <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</a>, inclusive as regras de publicação e de moderação.</span></label>
+    <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600;font-size:13px"><input type="checkbox" name="maior_de_idade" value="1" required style="margin-top:3px"> <span>{{ declaracoes.maior_idade }}</span></label>
+    <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600;font-size:13px"><input type="checkbox" name="consent_localizacao" value="1" style="margin-top:3px"> <span>{{ declaracoes.localizacao }}</span></label>
+    {% endif %}
+    <button class="btn purple">{{ 'Criar conta' if modo == 'cadastro' else 'Entrar' }}</button>
+    <p class="suave" style="margin:0;text-align:center">
+      {% if modo == 'cadastro' %}Já tem conta? <a href="/entrar">Entrar</a>{% else %}Ainda não tem conta? <a href="/cadastro">Criar conta</a>{% endif %}
+      · <a href="/app/">Abrir versão app</a>
+    </p>
+  </form>
+</body>
+</html>

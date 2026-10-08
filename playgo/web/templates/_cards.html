@@ -1,0 +1,96 @@
+{# Cards reutilizados em Início, Explorar, Grupos e Campeonatos. Cada macro recebe o dicionário dos serializadores. #}
+
+{% macro botao_entrar(a, rotulo='Quero jogar') %}
+  {% if a.minha_participacao == 'confirmado' %}<span class="btn confirmado">✓ Confirmado</span>
+  {% elif a.minha_participacao == 'espera' %}<span class="btn soft">Na lista de espera</span>
+  {% elif a.minha_participacao == 'pendente' %}<span class="btn soft">Aguardando aprovação</span>
+  {% else %}<button class="btn purple" data-entrar="{{ a.id }}">{{ rotulo }}</button>{% endif %}
+{% endmacro %}
+
+{% macro urgente(a) %}
+<div class="card urgent">
+  <a class="cobre" href="/atividades/{{ a.id }}" aria-label="{{ a.nome }}"></a>
+  <span class="tag {{ a.modalidade.cor }}">{{ a.modalidade.icone }} {{ a.modalidade.nome|upper }}</span>
+  <div class="need">{{ a.rotulo_falta or ('RESTAM ' ~ a.vagas ~ ' VAGAS') }}</div>
+  <h3>{{ a.nome }}</h3>
+  <div class="meta">{{ a.quando }}<br>📍 {{ a.arena_nome or a.local_nome }}{% if a.distancia %} • {{ a.distancia }}{% endif %}<br>{{ a.nivel_nome }} • {{ a.valor_texto }}</div>
+  <div class="countdown">⏱ {{ a.contagem }}</div>
+  <div class="spots"><strong data-confirmados>{{ a.confirmados }}/{{ a.max_participantes }} confirmados</strong>{{ botao_entrar(a, 'EU VOU') }}</div>
+</div>
+{% endmacro %}
+
+{% macro atividade(a, rotulo='Quero jogar') %}
+<div class="card">
+  <a class="cobre" href="/atividades/{{ a.id }}" aria-label="{{ a.nome }}"></a>
+  <span class="tag {{ a.modalidade.cor }}">{{ a.modalidade.icone }} {{ a.modalidade.nome|upper }}</span>
+  <h3>{{ a.nome }}</h3>
+  <div class="meta">{{ a.quando }}<br>📍 {{ a.arena_nome or a.local_nome }}{% if a.distancia %} • {{ a.distancia }}{% endif %}<br>{{ a.nivel_nome }} • {{ a.valor_texto }}</div>
+  <div class="spots">
+    {% if a.vagas > 0 %}<strong data-confirmados>{{ a.vagas }} vaga{{ 's' if a.vagas != 1 }}</strong>{% else %}<strong style="color:var(--muted)">Lotado</strong>{% endif %}
+    {{ botao_entrar(a, rotulo) }}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro atividade_curta(a) %}
+<div class="card">
+  <a class="cobre" href="/atividades/{{ a.id }}" aria-label="{{ a.nome }}"></a>
+  <span class="tag {{ a.modalidade.cor }}">{{ a.quando }}</span>
+  <h3>{{ a.modalidade.icone }} {{ a.nome }}</h3>
+  <div class="meta">{{ a.arena_nome or a.local_nome }}{% if a.distancia %} • {{ a.distancia }}{% endif %}</div>
+</div>
+{% endmacro %}
+
+{% macro campeonato(c, destaque=False) %}
+<div class="card {{ 'champ' if destaque }}">
+  <a class="cobre" href="/campeonatos/{{ c.id }}" aria-label="{{ c.nome }}"></a>
+  <span class="tag {{ '' if destaque else c.modalidade.cor }}">{{ c.situacao|upper }}</span>
+  <h3>{{ c.nome }}</h3>
+  <div class="meta">{{ c.modalidade.icone }} {{ c.max_equipes }} {{ 'duplas' if c.atletas_por_equipe == 2 else 'equipes' }} • {{ c.data_inicio_texto }}{% if c.premiacao %}<br>Premiação: {{ c.premiacao }}{% endif %}{% if c.categoria %}<br>{{ c.categoria }}{% endif %}<br>{{ c.local_nome }}{% if c.distancia %} • {{ c.distancia }}{% endif %}</div>
+  <div class="spots"><b>{{ c.valor_inscricao_texto }}</b><span class="btn {{ 'lime' if destaque else 'purple' }}">{{ 'Inscrever equipe' if c.inscricoes_abertas else 'Ver detalhes' }}</span></div>
+</div>
+{% endmacro %}
+
+{% macro grupo(g) %}
+<div class="card">
+  <a class="cobre" href="/grupos/{{ g.id }}" aria-label="{{ g.nome }}"></a>
+  <span class="tag {{ g.modalidade.cor }}">{{ g.modalidade.icone }} {{ g.membros }} membros</span>
+  <h3>{{ g.nome }}</h3>
+  <div class="meta">{{ g.modalidade.nome }}{% if g.cidade %} • {{ g.cidade }}{% endif %}{% if g.distancia %} • {{ g.distancia }}{% endif %}<br>
+    {% if g.proxima %}Próxima: {{ g.proxima.quando|lower }}{% elif g.local_habitual %}{{ g.local_habitual }}{% else %}&nbsp;{% endif %}</div>
+</div>
+{% endmacro %}
+
+{% macro arena(a) %}
+<div class="card">
+  <a class="cobre" href="/arenas/{{ a.id }}" aria-label="{{ a.nome }}"></a>
+  <span class="tag verde">🏟️ {{ a.quadras }} quadra{{ 's' if a.quadras != 1 }}</span>
+  <h3>{{ a.nome }}</h3>
+  <div class="meta">{{ a.endereco or a.cidade }}{% if a.distancia %} • {{ a.distancia }}{% endif %}{% if a.horarios_disponiveis %}<br><b style="color:var(--green)">{{ a.horarios_disponiveis }} horário{{ 's' if a.horarios_disponiveis != 1 }} livre{{ 's' if a.horarios_disponiveis != 1 }} hoje</b>{% endif %}</div>
+</div>
+{% endmacro %}
+
+{% macro horario(h) %}
+<div class="card">
+  <a class="cobre" href="/arenas/{{ h.arena_id }}" aria-label="Quadra disponível"></a>
+  <span class="tag verde">🏟️ QUADRA DISPONÍVEL</span>
+  <h3>{{ h.modalidade.icone if h.modalidade else '' }} {{ h.modalidade.nome if h.modalidade else 'Quadra' }} • {{ h.quando }}</h3>
+  <div class="meta">{{ h.arena_nome }} — {{ h.quadra_nome }}{% if h.distancia %} • {{ h.distancia }}{% endif %}<br><b>{{ h.valor_texto }}</b></div>
+</div>
+{% endmacro %}
+
+{% macro vazio(texto) %}<p class="vazio">{{ texto }}</p>{% endmacro %}
+
+{# Campo de local com mapa clicável. Preenche latitude/longitude (hidden). #}
+{% macro seletor_local(centro, lat='', lng='') %}
+<div class="field full">
+  <label>Ponto no mapa <span class="suave">— clique no mapa para marcar</span></label>
+  <div id="mapa-local" class="map formulario"></div>
+  <input type="hidden" name="latitude" id="campo-lat" value="{{ lat }}">
+  <input type="hidden" name="longitude" id="campo-lng" value="{{ lng }}">
+  <div><button type="button" class="btn soft pequeno" onclick="usarMinhaLocalizacao()">📍 Usar minha localização</button></div>
+</div>
+<script>
+  window.addEventListener('load', () => mapaSeletor('mapa-local', {{ centro|tojson }}, '#campo-lat', '#campo-lng'));
+</script>
+{% endmacro %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "_cards.html" as k %}
+{% block titulo %}Comunidades — PlayGo{% endblock %}
+{% block conteudo %}
+<div class="section-title"><h2>Comunidades</h2><a class="btn purple" href="/comunidades/nova">+ Criar comunidade</a></div>
+<p class="suave" style="margin:-6px 0 14px">Espaços de relacionamento dentro do app — por interesse, bairro, modalidade ou jeito de jogar — cada um com seu mural.</p>
+<form class="filtros" method="get"><div class="campo"><label>Buscar</label><input name="q" value="{{ busca }}" placeholder="nome, assunto ou cidade"></div><div class="campo" style="flex:0 0 auto"><label>&nbsp;</label><button class="btn purple">Buscar</button></div></form>
+
+{% macro cartao(x) %}
+<div class="card">
+  <a class="cobre" href="/comunidades/{{ x.id }}" aria-label="{{ x.nome }}"></a>
+  <span class="tag {{ 'verde' if x.visibilidade == 'publica' else 'laranja' }}">{{ {'publica': 'Pública', 'autorizados': 'Só autorizados', 'link': 'Só por link'}[x.visibilidade] }} · {{ x.membros }} membro{{ 's' if x.membros != 1 }}</span>
+  <h3>{{ x.nome }}</h3>
+  <div class="meta">{{ (x.descricao or '')[:110] }}{% if x.cidade %}<br>📍 {{ x.cidade }}{% endif %}</div>
+  {% if x.meu_status == 'pendente' %}<div class="spots"><span class="suave">Aguardando aprovação</span></div>{% endif %}
+</div>
+{% endmacro %}
+
+{% if c.minhas %}<div class="grid">{% for x in c.minhas %}{{ cartao(x) }}{% endfor %}</div>
+{% else %}{{ k.vazio('Você ainda não participa de nenhuma comunidade.') }}{% endif %}
+{% if c.descobrir %}
+<div class="section-title"><h2>Descubra comunidades</h2></div>
+<div class="grid">{% for x in c.descobrir %}{{ cartao(x) }}{% endfor %}</div>
+{% endif %}
+{% endblock %}
