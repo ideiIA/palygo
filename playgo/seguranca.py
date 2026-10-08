@@ -35,6 +35,8 @@ def chave_sessao() -> str:
     """Chave do .env ou, na falta, uma gerada na primeira execução e guardada fora do git."""
     if settings.chave_sessao:
         return settings.chave_sessao
+    if settings.em_serverless:
+        raise RuntimeError("Defina PLAYGO_CHAVE_SESSAO: o ambiente serverless não tem disco para guardar uma chave gerada.")
     arquivo = RAIZ / ".chave_sessao"
     if not arquivo.exists():
         arquivo.write_text(secrets.token_urlsafe(48), encoding="ascii")

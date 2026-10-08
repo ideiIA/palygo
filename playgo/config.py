@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -35,6 +36,15 @@ class Settings(BaseSettings):
     limite_posts_10min: int = 10
     denuncias_para_analise: int = 3  # denúncias que mandam o conteúdo para a análise do admin
 
+    # Hospedagem. No Vercel (variável VERCEL) o servidor é serverless: sem disco, sem threads, sem DDL a cada partida.
+    serverless: bool = False
+    auto_migrar: bool = True  # cria/atualiza as tabelas ao subir (desligado no serverless)
+    armazenamento: str = ""  # "local" força o disco; em branco = Supabase se houver URL e chave
+    supabase_url: str = ""  # https://<ref>.supabase.co
+    supabase_service_key: str = ""  # chave de serviço (secreta): só no servidor, nunca no navegador
+    supabase_bucket: str = "playgo-midia"
+    cron_secret: str = ""  # protege /api/v1/cron/ciclo (no Vercel: variável CRON_SECRET)
+
     # Moderação por IA. Provedor: "claude" ou "gemini"; em branco = o que tiver chave preenchida.
     ia_provedor: str = ""
     anthropic_api_key: str = ""
@@ -54,6 +64,27 @@ class Settings(BaseSettings):
     intervalo_agendador_s: int = 60
     lembrete_antecedencia_min: int = 120
 
+
+    @property
+    def em_serverless(self) -> bool:
+        return self.serverless or bool(os.environ.get("VERCEL"))
+
+    @property
+    def migrar_ao_subir(self) -> bool:
+        return self.auto_migrar and not self.em_serverless
+
+    @property
+    def segredo_cron(self) -> str:
+        return self.cron_secret or os.environ.get("CRON_SECRET", "")
+
+    # O Vercel limita o corpo da requisição a ~4,5 MB; nesse ambiente o teto efetivo é menor que o configurado.
+    @property
+    def limite_foto_mb(self) -> int:
+        return min(self.max_foto_mb, 4) if self.em_serverless else self.max_foto_mb
+
+    @property
+    def limite_video_mb(self) -> int:
+        return min(self.max_video_mb, 4) if self.em_serverless else self.max_video_mb
 
     @property
     def provedor_ia(self) -> str:

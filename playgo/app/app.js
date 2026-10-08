@@ -886,7 +886,7 @@
       i.type = 'file'; i.accept = 'image/jpeg,image/png,image/webp';
       i.onchange = async () => {
         if (!i.files[0]) return;
-        const fd = new FormData(); fd.append('arquivo', i.files[0]);
+        const fd = new FormData(); fd.append('arquivo', window.Mural ? await Mural.reduzir(i.files[0], 800, 0.88) : i.files[0]);
         try { estado.usuario = await api('/me/foto', { metodo: 'POST', form: fd }); toast('Foto atualizada!'); rotear(); } catch (e) { toast(e.message); }
       };
       i.click();

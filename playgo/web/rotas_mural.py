@@ -4,9 +4,9 @@ import json
 import re
 
 from fastapi import Form, Request
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response
 
-from .. import comunidades, contas, convites, midia, privacidade, publicacoes, termos
+from .. import armazenamento, comunidades, contas, convites, midia, privacidade, publicacoes, termos
 from ..deps import Atual, AtualLivre, Opcional, Sessao
 from ..erros import NaoEncontrado
 from ..models import Midia, Publicacao, Usuario
@@ -219,10 +219,7 @@ def _servir(midia_id: int, request: Request, s, t: str, miniatura: bool):
     if usuario is None or not usuario.ativo or m is None or p is None or not publicacoes.pode_ver(s, usuario, p):
         raise NaoEncontrado("Arquivo não encontrado.")
     rel = m.miniatura if miniatura and m.miniatura else m.arquivo
-    caminho = midia.caminho(rel)
-    if not caminho.exists():
-        raise NaoEncontrado("Arquivo não encontrado.")
-    return FileResponse(caminho, media_type="image/jpeg" if rel == m.miniatura else m.mime, headers={"Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff"})
+    return armazenamento.servir(rel, "image/jpeg" if rel == m.miniatura else m.mime, "private, max-age=3600")
 
 
 @app.get("/foto/{nome}")
@@ -230,10 +227,7 @@ def foto_de_perfil(nome: str):
     """Foto de perfil. O nome é aleatório (32 hex): quem não recebeu a URL não a adivinha."""
     if not re.fullmatch(r"[0-9a-f]{32}\.jpg", nome):
         raise NaoEncontrado("Foto não encontrada.")
-    caminho = midia.caminho(f"perfil/{nome}")
-    if not caminho.exists():
-        raise NaoEncontrado("Foto não encontrada.")
-    return FileResponse(caminho, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400", "X-Content-Type-Options": "nosniff"})
+    return armazenamento.servir(f"perfil/{nome}", "image/jpeg", "private, max-age=86400")
 
 
 @app.get("/midia/{midia_id}")

@@ -12,3 +12,6 @@ uploads/
 # Documentos de negócio: ficam só na máquina local
 PlayGO.docx
 prototipo_playgo_atualizado.html
+
+.env.vercel
+.env.local

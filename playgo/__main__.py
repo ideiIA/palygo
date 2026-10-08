@@ -15,6 +15,7 @@ def main() -> None:
     p.add_argument("--refazer", action="store_true", help="APAGA todas as tabelas e recria (só desenvolvimento)")
     sub.add_parser("ciclo", help="roda uma vez as rotinas do agendador (lembretes, reforço, encerramento)")
     sub.add_parser("purgar", help="elimina registros e publicações excluídas que passaram do prazo legal de guarda (LGPD)")
+    sub.add_parser("supabase", help="prepara o banco/Storage do Supabase: tabelas, RLS e bucket privado")
     sub.add_parser("agendador", help="fica rodando as rotinas periódicas sem a interface")
     p = sub.add_parser("web", help="sobe o site, o app (/app) e a API (/api/v1)")
     p.add_argument("--porta", type=int, default=8010)
@@ -40,6 +41,11 @@ def main() -> None:
             print(f"Entrar como {demo.DEMO_EMAIL} (senha em playgo/demo.py).")
     elif args.comando == "ciclo":
         print(agendador.ciclo())
+    elif args.comando == "supabase":
+        from . import supabase_setup
+
+        for linha in supabase_setup.preparar():
+            print(linha)
     elif args.comando == "purgar":
         from . import privacidade
 

@@ -39,6 +39,9 @@ ORM alternativo ou framework de front sem pedido explícito.
 - **Termos**: mudar `termos.VERSAO` obriga todos a aceitar de novo (portão em `deps.py`).
 - O `mural.js`/`mural.css` são compartilhados pelo site e pelo PWA; o PWA carrega os dois de `/static/`.
 
+- **Produção = Vercel serverless + Supabase** (`docs/deploy.md`): arquivos só por `armazenamento.py` (nunca `Path.write_bytes` direto), nada de thread/estado em memória,
+  tarefas periódicas só pelo endpoint de cron, limites de upload via `settings.limite_*_mb`. Tabelas do Supabase sempre com RLS ligado (`python -m playgo supabase`).
+
 ## Comandos
 
 ```powershell

@@ -22,7 +22,8 @@ Duas visões sobre o mesmo backend:
 .venv\Scripts\python -m playgo web      # site, app e API em http://localhost:8010
 ```
 
-Primeira vez: `python -m venv .venv` e `.venv\Scripts\pip install -r requirements.txt`.
+Primeira vez: `python -m venv .venv` e `.venv\Scripts\pip install -r requirements-dev.txt`.
+Publicar (GitHub + Supabase + Vercel): [docs/deploy.md](docs/deploy.md).
 O login de demonstração (`carlos@playgo.local`) e a senha estão em `playgo/demo.py`.
 
 Outros comandos: `init-db` (só tabelas + modalidades), `demo --refazer` (**apaga tudo** e recria — só desenvolvimento),

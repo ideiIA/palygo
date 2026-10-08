@@ -1,0 +1,13 @@
+.venv
+.pgdata
+.pytest_cache
+.ruff_cache
+uploads
+tests
+docs
+scripts
+.claude
+PlayGO.docx
+prototipo_playgo_atualizado.html
+.env
+.chave_sessao

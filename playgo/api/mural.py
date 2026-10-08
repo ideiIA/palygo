@@ -1,7 +1,9 @@
 """API do mural (publicações, comentários, moderação), comunidades, convites e privacidade.
 Mesmos serviços do site; autenticação por token Bearer ou cookie, como o resto de /api/v1."""
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
+import secrets
+
+from fastapi import APIRouter, BackgroundTasks, File, Form, Header, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from .. import (
@@ -15,11 +17,21 @@ from .. import (
     privacidade,
     publicacoes,
 )
+from ..config import settings
 from ..db import agora
 from ..deps import AtualApi, Sessao
 from ..erros import ErroNegocio
 
 router = APIRouter(prefix="/api/v1")
+
+
+def apos(tarefas: BackgroundTasks, funcao, alvo_id: int) -> None:
+    """Roda a análise de moderação depois da resposta. No serverless a função pode ser congelada assim que a resposta sai,
+    então lá a análise roda dentro da própria requisição (o mural já espera o resultado)."""
+    if settings.em_serverless:
+        funcao(alvo_id)
+    else:
+        tarefas.add_task(funcao, alvo_id)
 
 
 class TextoIn(BaseModel):
@@ -102,7 +114,7 @@ def criar_publicacao(
     e a pré-análise por IA roda em segundo plano."""
     dados = [midia.ler_upload(a) for a in arquivos if a.filename]
     p = publicacoes.criar(s, u, escopo, escopo_id, texto, latitude, longitude, local_nome, replicar_geral, dados)
-    tarefas.add_task(moderacao.processar_publicacao, p.id)
+    apos(tarefas, moderacao.processar_publicacao, p.id)
     return publicacoes.serializar(s, p, u)
 
 
@@ -114,7 +126,7 @@ def ver_publicacao(publicacao_id: int, u: AtualApi, s: Sessao):
 @router.patch("/publicacoes/{publicacao_id}")
 def editar_publicacao(publicacao_id: int, corpo: TextoIn, tarefas: BackgroundTasks, u: AtualApi, s: Sessao):
     p = publicacoes.editar(s, publicacao_id, u, corpo.texto)
-    tarefas.add_task(moderacao.processar_publicacao, p.id)
+    apos(tarefas, moderacao.processar_publicacao, p.id)
     return publicacoes.serializar(s, p, u)
 
 
@@ -156,14 +168,14 @@ def listar_comentarios(publicacao_id: int, u: AtualApi, s: Sessao):
 @router.post("/publicacoes/{publicacao_id}/comentarios", status_code=201)
 def comentar(publicacao_id: int, corpo: TextoIn, tarefas: BackgroundTasks, u: AtualApi, s: Sessao):
     c = publicacoes.comentar(s, u, publicacao_id, corpo.texto)
-    tarefas.add_task(moderacao.processar_comentario, c.id)
+    apos(tarefas, moderacao.processar_comentario, c.id)
     return publicacoes.serializar_comentario(s, c, u, publicacoes.obter(s, publicacao_id))
 
 
 @router.patch("/comentarios/{comentario_id}")
 def editar_comentario(comentario_id: int, corpo: TextoIn, tarefas: BackgroundTasks, u: AtualApi, s: Sessao):
     c = publicacoes.editar_comentario(s, comentario_id, u, corpo.texto)
-    tarefas.add_task(moderacao.processar_comentario, c.id)
+    apos(tarefas, moderacao.processar_comentario, c.id)
     return publicacoes.serializar_comentario(s, c, u, publicacoes.obter(s, c.publicacao_id))
 
 
@@ -349,3 +361,18 @@ def revogar_localizacao(u: AtualApi, s: Sessao):
 def excluir_conta(corpo: SenhaIn, u: AtualApi, s: Sessao):
     privacidade.excluir_conta(s, u, corpo.senha)
     return {"ok": True, "em": agora().isoformat(timespec="seconds")}
+
+
+# ---------------------------------------------------------------- rotinas periódicas (Vercel Cron / Supabase pg_cron)
+
+
+@router.get("/cron/ciclo")
+def cron_ciclo(authorization: str = Header(default="")):
+    """Lembretes, reforço de 'falta gente' e encerramento. Chamado por Vercel Cron (que envia `Authorization: Bearer $CRON_SECRET`)
+    ou pelo pg_cron do Supabase. Sem segredo configurado, fica desligado."""
+    from .. import agendador
+
+    segredo = settings.segredo_cron
+    if not segredo or not secrets.compare_digest(authorization, f"Bearer {segredo}"):
+        raise HTTPException(403, "Não autorizado.")
+    return agendador.ciclo()

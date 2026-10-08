@@ -206,7 +206,7 @@ def analisar_texto(texto: str) -> Veredito:
 
 
 def analisar_midia(rel: str, tipo: str, mime: str) -> Veredito:
-    v = ia_midia(midia.caminho(rel).read_bytes(), tipo, mime)
+    v = ia_midia(midia.ler(rel), tipo, mime)
     if v is not None:
         return v
     if settings.moderacao_midia_sem_ia == "liberar":

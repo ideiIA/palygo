@@ -16,6 +16,28 @@
   const av = (a, extra) => `<span class="mu-av ${extra || ''}">${a.foto_url ? `<img src="${esc(a.foto_url)}" alt="">` : esc(a.iniciais)}</span>`;
   const ACEITA = 'image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm';
 
+  // Fotos de celular passam de 4,5 MB (limite do corpo da requisição no Vercel): reduz no navegador antes de enviar.
+  // Só imagens JPEG/PNG/WebP; vídeo segue como está.
+  function reduzir(arquivo, lado, qualidade) {
+    lado = lado || 2048; qualidade = qualidade || 0.85;
+    if (!/^image\/(jpeg|png|webp)$/.test(arquivo.type)) return Promise.resolve(arquivo);
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(arquivo);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const k = Math.min(1, lado / Math.max(img.width, img.height));
+        if (k === 1 && arquivo.size < 1.5 * 1024 * 1024) return resolve(arquivo);
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob((b) => resolve(b ? new File([b], (arquivo.name || 'foto').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : arquivo), 'image/jpeg', qualidade);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(arquivo); };
+      img.src = url;
+    });
+  }
+
   function dialogo({ titulo, texto, motivos, placeholder, confirmar }) {
     return new Promise((resolve) => {
       const f = document.createElement('div');
@@ -226,7 +248,7 @@
           fd.append('local_nome', f.local_nome ? f.local_nome.value : '');
         }
         fd.append('replicar_geral', f.replicar && f.replicar.checked ? 'true' : 'false');
-        S.anexos.forEach((a) => fd.append('arquivos', a));
+        for (const a of S.anexos) fd.append('arquivos', await reduzir(a));
         const botao = f.querySelector('[data-enviar]');
         botao.disabled = true; botao.textContent = 'Enviando…';
         try {
@@ -300,5 +322,5 @@
     return { recarregar: iniciar };
   }
 
-  global.Mural = { montar, dialogo, esc };
+  global.Mural = { montar, dialogo, esc, reduzir };
 })(window);

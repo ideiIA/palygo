@@ -3,10 +3,22 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from .config import settings
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+def _criar_engine():
+    """Serverless: sem pool entre invocações (NullPool) — quem pooliza é o Supavisor do Supabase. No pooler em modo
+    transação (porta 6543) o psycopg não pode usar prepared statements."""
+    args: dict = {}
+    if ":6543/" in settings.database_url or "pooler.supabase.com" in settings.database_url:
+        args["prepare_threshold"] = None
+    if settings.em_serverless:
+        return create_engine(settings.database_url, poolclass=NullPool, connect_args=args)
+    return create_engine(settings.database_url, pool_pre_ping=True, connect_args=args)
+
+
+engine = _criar_engine()
 Session = sessionmaker(engine, expire_on_commit=False)
 
 _FUSO = ZoneInfo(settings.fuso)

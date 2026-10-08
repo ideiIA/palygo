@@ -11,7 +11,7 @@ from pathlib import Path
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from . import seguranca
+from . import armazenamento, seguranca
 from .config import settings
 from .db import agora
 from .erros import ErroNegocio
@@ -50,9 +50,9 @@ def processar(dados: bytes) -> Recebida:
     if achado is None:
         raise ErroNegocio("Arquivo não aceito. Envie fotos (JPG, PNG, WebP) ou vídeos (MP4, MOV, WebM).")
     tipo, mime, ext = achado
-    limite = (settings.max_foto_mb if tipo == "foto" else settings.max_video_mb) * 1024 * 1024
-    if len(dados) > limite:
-        raise ErroNegocio(f"O arquivo passa do limite de {settings.max_foto_mb if tipo == 'foto' else settings.max_video_mb} MB para {'fotos' if tipo == 'foto' else 'vídeos'}.")
+    teto_mb = settings.limite_foto_mb if tipo == "foto" else settings.limite_video_mb
+    if len(dados) > teto_mb * 1024 * 1024:
+        raise ErroNegocio(f"O arquivo passa do limite de {teto_mb} MB para {'fotos' if tipo == 'foto' else 'vídeos'}.")
     if tipo == "video":
         return Recebida("video", mime, ext, dados)
 
@@ -91,8 +91,8 @@ def processar_avatar(dados: bytes) -> bytes:
     achado = detectar(dados)
     if achado is None or achado[0] != "foto":
         raise ErroNegocio("Envie uma foto (JPG, PNG ou WebP).")
-    if len(dados) > settings.max_foto_mb * 1024 * 1024:
-        raise ErroNegocio(f"A foto passa do limite de {settings.max_foto_mb} MB.")
+    if len(dados) > settings.limite_foto_mb * 1024 * 1024:
+        raise ErroNegocio(f"A foto passa do limite de {settings.limite_foto_mb} MB.")
     try:
         img = Image.open(io.BytesIO(dados))
         img.load()
@@ -111,18 +111,17 @@ def processar_avatar(dados: bytes) -> bytes:
 
 def salvar_avatar(jpeg: bytes) -> str:
     """Grava em uploads/perfil/<32 hex>.jpg (nome aleatório: a URL é a 'chave') e devolve só o nome."""
-    (settings.pasta_uploads / "perfil").mkdir(parents=True, exist_ok=True)
     nome = uuid.uuid4().hex + ".jpg"
-    (settings.pasta_uploads / "perfil" / nome).write_bytes(jpeg)
+    armazenamento.salvar(f"perfil/{nome}", jpeg, "image/jpeg")
     return nome
 
 
 def ler_upload(arquivo) -> bytes:
     """Lê o UploadFile sem deixar um arquivo gigante encher a memória."""
-    teto = max(settings.max_foto_mb, settings.max_video_mb) * 1024 * 1024
-    dados = arquivo.file.read(teto + 1)
-    if len(dados) > teto:
-        raise ErroNegocio(f"O arquivo passa do limite de {max(settings.max_foto_mb, settings.max_video_mb)} MB.")
+    teto_mb = max(settings.limite_foto_mb, settings.limite_video_mb)
+    dados = arquivo.file.read(teto_mb * 1024 * 1024 + 1)
+    if len(dados) > teto_mb * 1024 * 1024:
+        raise ErroNegocio(f"O arquivo passa do limite de {teto_mb} MB.")
     return dados
 
 
@@ -130,14 +129,13 @@ def salvar(rec: Recebida) -> tuple[str, str | None, str]:
     """Grava em uploads/AAAA/MM/ e devolve (arquivo, miniatura, sha256), caminhos relativos à pasta."""
     n = agora()
     pasta_rel = Path(f"{n.year:04d}") / f"{n.month:02d}"
-    (settings.pasta_uploads / pasta_rel).mkdir(parents=True, exist_ok=True)
     nome = uuid.uuid4().hex
     rel = pasta_rel / f"{nome}.{rec.extensao}"
-    (settings.pasta_uploads / rel).write_bytes(rec.dados)
+    armazenamento.salvar(rel.as_posix(), rec.dados, rec.mime)
     mini_rel = None
     if rec.miniatura:
         mini_rel = pasta_rel / f"{nome}_t.jpg"
-        (settings.pasta_uploads / mini_rel).write_bytes(rec.miniatura)
+        armazenamento.salvar(mini_rel.as_posix(), rec.miniatura, "image/jpeg")
     return rel.as_posix(), (mini_rel.as_posix() if mini_rel else None), hashlib.sha256(rec.dados).hexdigest()
 
 
@@ -150,13 +148,13 @@ def caminho(rel: str) -> Path:
     return alvo
 
 
+def ler(rel: str) -> bytes:
+    return armazenamento.ler(rel)
+
+
 def remover_arquivos(*rels: str | None) -> None:
     for rel in rels:
-        if rel:
-            try:
-                caminho(rel).unlink(missing_ok=True)
-            except (ErroNegocio, OSError):
-                pass
+        armazenamento.remover(rel)
 
 
 # ---- URLs assinadas: o <img>/<video> não manda o token Bearer do app, então a API entrega a URL já autorizada

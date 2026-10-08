@@ -46,11 +46,12 @@ PASTA = Path(__file__).parent
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    criar_tabelas()
-    with Session() as s:
-        modalidades.semear(s)
+    if settings.migrar_ao_subir:
+        criar_tabelas()
+        with Session() as s:
+            modalidades.semear(s)
     parar = threading.Event()
-    if settings.agendador_na_web:
+    if settings.agendador_na_web and not settings.em_serverless:
         threading.Thread(target=agendador.laco, args=(parar,), name="agendador", daemon=True).start()
     yield
     parar.set()
