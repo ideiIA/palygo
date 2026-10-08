@@ -818,7 +818,7 @@
           }
         }
         return `<div class="card ${atual ? 'champ' : ''}"><span class="tag ${atual ? '' : pl.codigo === 'arena' ? 'verde' : pl.codigo === 'organizador' ? 'laranja' : ''}">${atual ? 'SEU PLANO' : esc(pl.nome.toUpperCase())}</span><h3>${esc(pl.nome)}</h3>
-          <div style="font-size:22px;font-weight:900;margin:4px 0">${pl.codigo === 'gratuito' ? 'Grátis' : brl(pl.valor_mensal)}</div><div class="meta">${esc(lim)}</div><div style="margin-top:12px">${acao}</div></div>`;
+          ${pl.codigo === 'gratuito' ? '' : `<div style="font-size:22px;font-weight:900;margin:4px 0">${brl(pl.valor_mensal)}</div>`}<div class="meta">${esc(lim)}</div><div style="margin-top:12px">${acao}</div></div>`;
       };
       const STATUS_PG = { PENDING: 'Aguardando pagamento', OVERDUE: 'Vencida', CONFIRMED: 'Paga', RECEIVED: 'Paga', RECEIVED_IN_CASH: 'Paga', REFUNDED: 'Estornada', DELETED: 'Cancelada' };
       const cobrancas = (p.cobrancas || []).length ? `<h2 style="margin-top:18px">🧾 Minhas cobranças</h2><div class="lista">${p.cobrancas.map((c) => `<div class="card"><b>${dataBr(c.vencimento)}</b> · R$ ${c.valor.toFixed(2).replace('.', ',')} · <span class="tag ${c.pago_em ? 'verde' : 'laranja'}">${esc(STATUS_PG[c.status] || c.status)}</span>${c.pago_em ? `<div class="suave">paga em ${dataBr(c.pago_em)}</div>` : ''}${c.link ? `<a class="btn suave bloco" style="margin-top:8px" href="${esc(c.link)}" target="_blank" rel="noopener">${c.pago_em ? 'Ver recibo' : 'Abrir fatura / 2ª via'}</a>` : ''}</div>`).join('')}</div>` : '';

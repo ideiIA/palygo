@@ -40,7 +40,7 @@
       }
     }
     return `<div class="card ${atual ? 'champ' : ''}"><span class="tag ${atual ? '' : pl.codigo === 'arena' ? 'verde' : pl.codigo === 'organizador' ? 'laranja' : pl.codigo === 'pro' ? 'azul' : 'roxo'}">${atual ? 'SEU PLANO' : esc(pl.nome.toUpperCase())}</span>
-      <h3>${esc(pl.nome)}</h3><div style="font-size:24px;font-weight:900;margin:6px 0">${pl.codigo === 'gratuito' ? 'Grátis' : brl(pl.valor_mensal)}</div>
+      <h3>${esc(pl.nome)}</h3>${pl.codigo === 'gratuito' ? '' : `<div style="font-size:24px;font-weight:900;margin:6px 0">${brl(pl.valor_mensal)}</div>`}
       <div class="meta">${esc(lim)}</div><div class="spots" style="flex-wrap:wrap;gap:8px">${acao || '<span></span>'}</div></div>`;
   }
 
