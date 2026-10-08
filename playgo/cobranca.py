@@ -68,8 +68,8 @@ def _cpf_cnpj(texto: str) -> str:
 
 def assinar(s: SessaoORM, u: Usuario, plano: str, cpf_cnpj: str) -> dict:
     """Cria (ou troca) a assinatura mensal e devolve o link para pagar."""
-    if plano not in ("pro", "organizador", "arena"):
-        raise ErroNegocio("Escolha o plano Pro, Organizador ou Arena.")
+    if plano not in planos.CODIGOS:
+        raise ErroNegocio("Escolha um plano válido.")
     regra = planos.regras(s, plano)
     if regra.valor_mensal <= 0:
         raise ErroNegocio(f"O valor do plano {regra.nome} ainda não foi definido pela administração.")

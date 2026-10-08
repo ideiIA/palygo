@@ -73,8 +73,8 @@
     if (conceder) {
       const plano = prompt('Plano a conceder: gratuito (Usuário), pro, organizador ou arena', 'pro');
       if (!plano) return;
-      let ate = null;
-      if (plano.trim() !== 'gratuito') { ate = prompt('Válido até (AAAA-MM-DD)', ''); if (!ate) return; }
+      const ate = prompt(plano.trim() === 'gratuito' ? 'Válido até (AAAA-MM-DD). Deixe em branco para voltar ao plano Usuário sem acesso pago.' : 'Válido até (AAAA-MM-DD)', '') || null;
+      if (!ate && plano.trim() !== 'gratuito') return;
       try { await webApi('/admin/usuarios/' + conceder.dataset.plano + '/plano', { metodo: 'POST', corpo: { plano: plano.trim(), ate } }); toast('Plano atualizado.'); carregar(); } catch (e) { toast(e.message); }
     }
   });

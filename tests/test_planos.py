@@ -89,7 +89,7 @@ def test_passou_do_limite_do_pro_comeca_o_teste_gratis_do_organizador(s, fabrica
     a = planos.assinatura_de(s, u)
     assert (sit["plano"], sit["status"]) == ("organizador", "teste")
     assert a.teste_ate == agora().date() + timedelta(days=settings.teste_dias) and a.testes_usados == ["organizador"]
-    assert s.query(Notificacao).filter(Notificacao.usuario_id == u.id, Notificacao.titulo.like("%Teste grátis%")).count() == 1
+    assert s.query(Notificacao).filter(Notificacao.usuario_id == u.id, Notificacao.titulo.like("%Teste do plano%")).count() == 1
     assert sit["teste_disponivel"] == ["arena"]  # o do Arena ainda não foi usado; o do Pro já está incluído
 
 
@@ -276,6 +276,29 @@ def test_assinar_cria_cliente_e_assinatura_no_asaas(s, fabrica, asaas):
     assert len(fatura) == 1 and fatura[0]["link"] == "https://sandbox.asaas.com/i/abc" and fatura[0]["status"] == "PENDING"
 
 
+def test_plano_usuario_com_valor_passa_a_cobrar(s, fabrica, asaas):
+    from playgo import vagas
+
+    admin = _admin(fabrica, s)
+    org, u = fabrica.atleta("Org"), fabrica.atleta("Usuario")
+    _dar_pro(s, fabrica, org)
+    jogo = _jogo(s, fabrica, org)
+    assert planos.resumo(s, u)["acesso_basico"] is True  # em R$ 0 nada é cobrado
+    r = planos.salvar_regras(s, admin, "gratuito", valor_mensal=Decimal("5"))
+    try:
+        assert r["assinavel"] is True and planos.resumo(s, u)["acesso_basico"] is False
+        with pytest.raises(PlanoNecessario) as e:
+            vagas.entrar(s, jogo.id, u)  # participar também exige o plano Usuário em dia
+        assert e.value.plano == "gratuito" and "Usuário" in str(e.value)
+        assert planos.resumo(s, org)["acesso_basico"] is True  # qualquer plano em dia cobre o básico
+        out = cobranca.assinar(s, u, "gratuito", "529.982.247-25")
+        assert out["plano"] == "gratuito" and out["valor"] == 5.0
+        planos.conceder(s, admin, u.id, "gratuito", agora().date() + timedelta(days=30))  # cortesia do administrador
+        assert planos.resumo(s, u)["acesso_basico"] is True and vagas.entrar(s, jogo.id, u).status == "confirmado"
+    finally:
+        planos.salvar_regras(s, admin, "gratuito", valor_mensal=Decimal(0))
+
+
 def test_assinar_o_plano_pro(s, fabrica, asaas):
     u = fabrica.atleta("Assina Pro")
     admin = _admin(fabrica, s)
@@ -293,8 +316,10 @@ def test_assinar_valida_dados(s, fabrica, asaas, monkeypatch):
     u = fabrica.atleta("Dados")
     with pytest.raises(ErroNegocio, match="CPF"):
         cobranca.assinar(s, u, "organizador", "123")
-    with pytest.raises(ErroNegocio, match="Organizador ou Arena"):
-        cobranca.assinar(s, u, "gratuito", "52998224725")
+    with pytest.raises(ErroNegocio, match="plano válido"):
+        cobranca.assinar(s, u, "inexistente", "52998224725")
+    with pytest.raises(ErroNegocio, match="ainda não foi definido"):
+        cobranca.assinar(s, u, "gratuito", "52998224725")  # o Usuário em R$ 0 não tem o que cobrar
     with pytest.raises(ErroNegocio, match="ainda não foi definido"):
         cobranca.assinar(s, u, "arena", "52998224725")  # preço do Arena segue em R$ 0
     monkeypatch.setattr(settings, "asaas_api_key", "")
@@ -413,6 +438,6 @@ def test_paginas_de_planos_renderizam(banco):
     email = f"{uuid.uuid4().hex[:10]}@teste.local"
     assert c.post("/cadastro", data={"nome": "Pagina Plano", "email": email, "senha": "senha-de-teste-1", "usuario": f"pg{uuid.uuid4().hex[:10]}", "aceito_termos": "1", "maior_de_idade": "1"}, follow_redirects=False).status_code == 303
     r = c.get("/planos")
-    assert r.status_code == 200 and "Meu plano" in r.text and "Participar" in r.text
+    assert r.status_code == 200 and "Meu plano" in r.text and "sempre gratuito" not in r.text
     assert 'href="/planos"' in c.get("/mural").text  # item no menu
     assert c.get("/administracao", follow_redirects=False).status_code == 303  # só admin

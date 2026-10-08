@@ -75,8 +75,9 @@ def _fechar_se_lotou(a: Atividade) -> None:
 def entrar(s: SessaoORM, atividade_id: int, usuario: Usuario, token: str | None = None) -> Participacao:
     """'Eu vou'. Resultado: confirmado, pendente (atividade só para autorizados) ou espera (lotado).
     Quem foi convidado pelo @usuario ou entra pelo link dispensa a aprovação."""
-    from . import convites
+    from . import convites, planos
 
+    planos.exigir(s, usuario, "basico")
     a = travar(s, atividade_id)
     convite = s.scalar(select(Convite).where(Convite.escopo == "atividade", Convite.escopo_id == a.id, Convite.convidado_id == usuario.id, Convite.status != "recusado"))
     if a.visibilidade == "link" and not convites.pode_acessar_atividade(s, usuario, a, token):

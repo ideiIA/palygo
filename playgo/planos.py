@@ -1,13 +1,14 @@
 """Planos e mensalidades por perfil.
 
-  gratuito     Usuário: vê tudo, publica e comenta no feed e participa de atividades, de graça. Não organiza atividades.
+  gratuito     Usuário: vê tudo, publica e comenta no feed e participa de atividades. Não organiza atividades. O preço é do
+               administrador: em R$ 0 não há cobrança; com valor, publicar/comentar/participar exige estar com acesso em dia.
   pro          Pro: organiza atividades (com limites de participantes e de atividades abertas).
   organizador  campeonatos e atividades sem limite.
   arena        tudo do organizador + arenas, quadras, agenda e divulgação de horários.
 
 Teste grátis: 30 dias, começa sozinho na primeira vez que a pessoa precisa do recurso (uma vez por plano).
 Ao vencer, 7 dias de tolerância (segue funcionando, com aviso); depois disso não cria nem divulga nada novo, mas o que
-já existe continua e os dados ficam preservados. Participar é sempre gratuito. Administrador não paga.
+já existe continua e os dados ficam preservados. Administrador não paga.
 Preços e limites vivem na tabela `planos` (o administrador edita); o que faltar usa DEFAULTS."""
 
 from dataclasses import dataclass
@@ -65,7 +66,7 @@ def _dict(r: Regras) -> dict:
     return {
         "codigo": r.codigo, "nome": r.nome, "valor_mensal": float(r.valor_mensal), "max_participantes": r.max_participantes,
         "max_atividades_abertas": r.max_atividades_abertas, "pode_campeonato": r.pode_campeonato, "pode_arena": r.pode_arena,
-        "descricao": r.descricao, "pode_atividade": r.pode_atividade, "assinavel": r.codigo != "gratuito" and r.valor_mensal > 0,
+        "descricao": r.descricao, "pode_atividade": r.pode_atividade, "assinavel": r.valor_mensal > 0,
     }
 
 
@@ -152,9 +153,19 @@ def resumo(s: SessaoORM, u: Usuario) -> dict:
     return {
         **{k: (v.isoformat() if isinstance(v, date) else v) for k, v in sit.items()},
         "regras": _dict(r), "planos": [_dict(x) for x in todas(s)],
-        "atividades_abertas": _abertas(s, u), "teste_dias": settings.teste_dias, "tolerancia_dias": settings.tolerancia_dias,
+        "acesso_basico": acesso_basico(s, u), "atividades_abertas": _abertas(s, u), "teste_dias": settings.teste_dias, "tolerancia_dias": settings.tolerancia_dias,
         "cobrancas": cobrancas(s, u),
     }
+
+
+ACESSO_VIGENTE = ("administrador", "teste", "ativa", "cancelada", "tolerancia")
+
+
+def acesso_basico(s: SessaoORM, u: Usuario) -> bool:
+    """Pode publicar, comentar e participar? Sempre, enquanto o plano Usuário estiver em R$ 0; com valor, só com algum plano em dia."""
+    if u.admin or regras(s, "gratuito").valor_mensal <= 0:
+        return True
+    return situacao(s, u)["status"] in ACESSO_VIGENTE
 
 
 def cobrancas(s: SessaoORM, u: Usuario) -> list[dict]:
@@ -192,7 +203,7 @@ def _iniciar_teste(s: SessaoORM, u: Usuario, plano: str) -> bool:
     a.testes_usados = sorted({*(a.testes_usados or []), plano})
     s.flush()
     nome = DEFAULTS[plano].nome
-    notificacoes.avisar(s, u.id, "plano", f"🎁 Teste grátis do plano {nome} começou", f"São {settings.teste_dias} dias, até {a.teste_ate.strftime('%d/%m/%Y')}. Você assina quando quiser, em Meu plano.", "/planos", None, f"plano:teste:{u.id}:{plano}")
+    notificacoes.avisar(s, u.id, "plano", f"🎁 Teste do plano {nome} começou", f"São {settings.teste_dias} dias, até {a.teste_ate.strftime('%d/%m/%Y')}. Você assina quando quiser, em Meu plano.", "/planos", None, f"plano:teste:{u.id}:{plano}")
     auditoria.registrar(s, u.id, "plano_teste_iniciar", "usuario", u.id, plano=plano, ate=a.teste_ate)
     return True
 
@@ -207,18 +218,18 @@ def conceder(s: SessaoORM, admin: Usuario, alvo_id: int, plano: str, ate: date |
     if plano not in CODIGOS:
         raise ErroNegocio("Plano inválido.")
     a = assinatura_de(s, alvo)
-    if plano == "gratuito":
+    if plano == "gratuito" and ate is None:
         if a is not None:
             a.status, a.vigente_ate, a.teste_ate = "cancelada", agora().date() - timedelta(days=settings.tolerancia_dias + 1), None
     else:
         if ate is None or ate < agora().date():
-            raise ErroNegocio("Informe uma data de validade no futuro.")
+            raise ErroNegocio("Informe uma data de validade no futuro.")  # sem data, só o plano Usuário "volta ao básico"
         if a is None:
             a = Assinatura(usuario_id=alvo.id, plano=plano, status="ativa", origem="manual", testes_usados=[])
             s.add(a)
         a.plano, a.status, a.origem, a.vigente_ate = plano, "ativa", "manual", ate
     auditoria.registrar(s, admin.id, "plano_conceder", "usuario", alvo.id, plano=plano, ate=ate)
-    if plano != "gratuito":
+    if ate is not None:
         notificacoes.avisar(s, alvo.id, "plano", f"Plano {DEFAULTS[plano].nome} liberado", f"Válido até {ate.strftime('%d/%m/%Y')}.", "/planos", None, f"plano:conceder:{alvo.id}:{plano}:{ate}")
     s.commit()
     return resumo(s, alvo)
@@ -231,6 +242,10 @@ def exigir(s: SessaoORM, u: Usuario, recurso: str, max_participantes: int | None
     """Levanta PlanoNecessario se o plano da pessoa não cobre o recurso ('atividade' | 'campeonato' | 'arena').
     Antes de recusar, tenta o teste grátis (só se ainda não foi usado para aquele plano)."""
     if u.admin:
+        return
+    if recurso == "basico":
+        if not acesso_basico(s, u):
+            raise PlanoNecessario("gratuito", f"Para publicar e participar, assine o plano {regras(s, 'gratuito').nome}.")
         return
     r = regras(s, situacao(s, u)["plano"])
     if recurso == "atividade":
@@ -272,7 +287,7 @@ def avisar_vencimentos(s: SessaoORM) -> int:
     total = 0
     for a in s.scalars(select(Assinatura)):
         fim = fim_do_acesso(a)
-        if fim is None or a.plano == "gratuito":
+        if fim is None:
             continue
         dias = (fim - hoje).days
         nome = DEFAULTS[a.plano].nome

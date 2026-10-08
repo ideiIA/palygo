@@ -41,8 +41,8 @@ def termos_de_uso() -> list[dict]:
             "Administradores não editam publicações de outras pessoas; apenas ocultam, aprovam ou rejeitam.",
         ]},
         {"titulo": "5-A. Planos e mensalidades", "paragrafos": [
-            "Ver o conteúdo, publicar e comentar no feed e participar de atividades, grupos, comunidades e campeonatos é gratuito (plano Usuário). Organizar atividades exige o plano Pro, dentro dos limites informados em Meu plano; atividades maiores e campeonatos exigem o plano Organizador; arenas, quadras, agenda e divulgação de horários exigem o plano Arena.",
-            f"Quem precisa de um plano ganha {settings.teste_dias} dias de teste grátis, uma vez por plano. Depois do teste ou de um período pago, há {settings.tolerancia_dias} dias de tolerância; passado esse prazo, não é possível criar nem divulgar nada novo, mas o que já existe continua funcionando e seus dados são preservados.",
+            "Ver o conteúdo, publicar e comentar no feed e participar de atividades, grupos, comunidades e campeonatos faz parte do plano Usuário. Organizar atividades exige o plano Pro, dentro dos limites informados em Meu plano; atividades maiores e campeonatos exigem o plano Organizador; arenas, quadras, agenda e divulgação de horários exigem o plano Arena.",
+            f"O valor de cada plano é informado em Meu plano. Quem precisa de um plano ganha {settings.teste_dias} dias de teste, uma vez por plano. Depois do teste ou de um período pago, há {settings.tolerancia_dias} dias de tolerância; passado esse prazo, não é possível criar nem divulgar nada novo, mas o que já existe continua funcionando e seus dados são preservados.",
             "A cobrança é mensal e recorrente, processada pelo Asaas (Pix, boleto ou cartão). Você pode cancelar a qualquer momento em Meu plano; o acesso segue até o fim do período já pago. Os valores podem mudar, com aviso prévio. Cobranças pagas não são reembolsadas proporcionalmente, salvo nos casos previstos em lei (inclusive o direito de arrependimento do Código de Defesa do Consumidor em até 7 dias da contratação).",
         ]},
         {"titulo": "6. Registros e guarda de dados", "paragrafos": [

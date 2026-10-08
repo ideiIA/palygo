@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session as SessaoORM
 
-from . import auditoria, escopos, midia, notificacoes
+from . import auditoria, escopos, midia, notificacoes, planos
 from . import serializadores as ser
 from .config import settings
 from .db import agora
@@ -111,6 +111,7 @@ def criar(
     arquivos: list[bytes] | None = None,
 ) -> Publicacao:
     """Cria em análise; quem chamou dispara `moderacao.processar_publicacao`. O local é obrigatório."""
+    planos.exigir(s, autor, "basico")
     texto = (texto or "").strip()
     arquivos = arquivos or []
     if len(texto) > settings.max_texto_post:
@@ -309,6 +310,7 @@ def denunciar(s: SessaoORM, usuario: Usuario, tipo: str, alvo_id: int, motivo: s
 
 
 def comentar(s: SessaoORM, usuario: Usuario, publicacao_id: int, texto: str) -> Comentario:
+    planos.exigir(s, usuario, "basico")
     p = obter(s, publicacao_id)
     if not _pode_comentar_em(s, usuario, p):
         raise SemPermissao("Você não pode comentar nesta publicação.")
