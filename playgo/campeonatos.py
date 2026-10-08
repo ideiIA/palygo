@@ -183,7 +183,7 @@ def inscrever_equipe(s: SessaoORM, campeonato_id: int, capitao: Usuario, nome: s
     s.flush()
     for uid in convidados or []:
         convidar(s, e.id, capitao, uid, _commit=False)
-    notificacoes.avisar(s, c.organizador_id, "equipe", f"Nova equipe em {c.nome}: {e.nome}", f"Capitão: {capitao.nome}", f"/campeonatos/{c.id}", None, f"eq:{e.id}")
+    notificacoes.avisar(s, c.organizador_id, "equipe", f"Nova equipe em {c.nome}: {e.nome}", f"Capitão: {capitao.arroba}", f"/campeonatos/{c.id}", None, f"eq:{e.id}")
     s.commit()
     return e
 

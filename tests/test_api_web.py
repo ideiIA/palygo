@@ -243,3 +243,20 @@ def test_site_login_errado_e_sair(cliente, banco):
     assert c.post("/sair", follow_redirects=False).status_code == 303
     assert c.get("/", follow_redirects=False).status_code == 303
     assert c.post("/entrar", data={"email": email, "senha": "senha-de-teste-1"}, follow_redirects=False).status_code == 303
+
+
+def test_pagina_de_notificacoes_mostra_o_texto(cliente, banco):
+    """Regressão: o menu usava a variável `itens` e escondia a lista, deixando as notificações em branco."""
+    from playgo import notificacoes
+    from playgo.db import Session
+    from playgo.models import Usuario
+    from sqlalchemy import select
+
+    site = TestClient(cliente.app)
+    email = _entrar_no_site(site)
+    with Session() as s:
+        u = s.scalar(select(Usuario).where(Usuario.email == email))
+        notificacoes.avisar(s, u.id, "vaga", "⚽ Falta 1 jogador perto de você!", "Futebol hoje às 20h, a 1,7 km.", "/atividades/1", None, "teste-pagina")
+        s.commit()
+    r = site.get("/notificacoes")
+    assert r.status_code == 200 and "Falta 1 jogador perto de você!" in r.text and "Futebol hoje às 20h" in r.text and 'href="/atividades/1"' in r.text

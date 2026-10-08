@@ -18,7 +18,7 @@
   <script src="/static/web.js" defer></script>
   <script src="/static/mural.js" defer></script>
 </head>
-{% set itens = [
+{% set itens_do_menu = [
   ('home', '/', '⌂', 'Início'),
   ('mural', '/mural', '✎', 'Feed'),
   ('explorar', '/explorar', '⌖', 'Explorar'),
@@ -32,7 +32,7 @@
 <aside class="sidebar">
   <a class="logo" href="/">Play<span>Go</span></a>
   <nav class="nav">
-    {% for chave, url, icone, nome in itens %}
+    {% for chave, url, icone, nome in itens_do_menu %}
     <a href="{{ url }}" class="{{ 'active' if aba == chave }}"><span class="ico">{{ icone }}</span><span class="t">{{ nome }}</span></a>
     {% endfor %}
     <div class="manager"><small>Gestão</small></div>
