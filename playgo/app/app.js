@@ -623,6 +623,15 @@
     const s = $('#sino');
     if (n === undefined) { try { n = (await api('/notificacoes/contagem')).nao_lidas; } catch (e) { return; } }
     s.hidden = !n; s.textContent = n > 99 ? '99+' : n;
+    atualizarEquipe();
+  }
+
+  // Ícones fixos de Moderação (administrador e moderador geral) e Administração (só administrador), com a fila pendente
+  async function atualizarEquipe() {
+    const u = estado.usuario || {};
+    $('#mod').hidden = !u.equipe_moderacao; $('#adm').hidden = !u.admin;
+    if (!u.equipe_moderacao) return;
+    try { const n = (await api('/moderacao/contagem')).total; const b = $('#modn'); b.hidden = !n; b.textContent = n > 99 ? '99+' : n; } catch (e) { /* sem rede */ }
   }
 
   // ------------------------------------------------------------ mural, comunidades, convites, moderação, termos e privacidade (LGPD)
