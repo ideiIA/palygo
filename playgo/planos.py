@@ -20,7 +20,7 @@ from . import auditoria, notificacoes
 from .config import settings
 from .db import agora
 from .erros import ErroNegocio, NaoEncontrado, PlanoNecessario, SemPermissao
-from .models import Assinatura, Atividade, Plano, Usuario
+from .models import Assinatura, Atividade, Pagamento, Plano, Usuario
 
 ORDEM = {"gratuito": 0, "organizador": 1, "arena": 2}
 CODIGOS = tuple(ORDEM)
@@ -141,7 +141,21 @@ def resumo(s: SessaoORM, u: Usuario) -> dict:
         **{k: (v.isoformat() if isinstance(v, date) else v) for k, v in sit.items()},
         "regras": _dict(r), "planos": [_dict(x) for x in todas(s)],
         "atividades_abertas": _abertas(s, u), "teste_dias": settings.teste_dias, "tolerancia_dias": settings.tolerancia_dias,
+        "cobrancas": cobrancas(s, u),
     }
+
+
+def cobrancas(s: SessaoORM, u: Usuario) -> list[dict]:
+    """Faturas da pessoa, da mais recente à mais antiga; `link` abre a fatura no Asaas (2ª via, Pix, boleto, recibo)."""
+    a = assinatura_de(s, u)
+    if a is None:
+        return []
+    pgs = s.scalars(select(Pagamento).where(Pagamento.assinatura_id == a.id).order_by(Pagamento.vencimento.desc(), Pagamento.id.desc())).all()
+    return [
+        {"id": p.id, "valor": float(p.valor), "status": p.status, "vencimento": p.vencimento.isoformat(), "pago_em": p.pago_em.isoformat() if p.pago_em else None,
+         "link": p.invoice_url if (p.invoice_url or "").startswith("https://") else None}
+        for p in pgs
+    ]
 
 
 def _abertas(s: SessaoORM, u: Usuario) -> int:

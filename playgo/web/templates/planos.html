@@ -4,6 +4,7 @@
 <div class="section-title"><h2>💳 Meu plano</h2></div>
 <div id="situacao"></div>
 <div class="grid" id="cards" style="margin-top:18px"></div>
+<div id="cobrancas"></div>
 <p class="suave" style="margin-top:18px">Participar de atividades, grupos, comunidades e campeonatos é <b>sempre gratuito</b>. A cobrança é mensal e recorrente pelo Asaas (Pix, boleto ou cartão); você cancela quando quiser e o acesso segue até o fim do período pago. Veja os <a href="/termos">Termos de Uso</a>.</p>
 <script>
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -42,10 +43,18 @@
       <div class="meta">${esc(lim)}</div><div class="spots" style="flex-wrap:wrap;gap:8px">${acao || '<span></span>'}</div></div>`;
   }
 
+  const STATUS_PG = { PENDING: 'Aguardando pagamento', OVERDUE: 'Vencida', CONFIRMED: 'Paga', RECEIVED: 'Paga', RECEIVED_IN_CASH: 'Paga', REFUNDED: 'Estornada', DELETED: 'Cancelada' };
+  function cobrancas() {
+    if (!P.cobrancas.length) return '';
+    const linhas = P.cobrancas.map((c) => `<div class="pessoa" style="flex-wrap:wrap;gap:10px"><b>${fmt(c.vencimento)}</b><span>R$ ${c.valor.toFixed(2).replace('.', ',')}</span><span class="tag ${c.pago_em ? 'verde' : 'laranja'}">${esc(STATUS_PG[c.status] || c.status)}</span>${c.pago_em ? `<span class="suave">paga em ${fmt(c.pago_em)}</span>` : ''}${c.link ? `<a class="btn soft pequeno" href="${esc(c.link)}" target="_blank" rel="noopener">${c.pago_em ? 'Ver recibo' : 'Abrir fatura / 2ª via'}</a>` : ''}</div>`).join('');
+    return `<div class="panel" style="margin-top:18px"><h2>🧾 Minhas cobranças</h2><div class="pessoas">${linhas}</div></div>`;
+  }
+
   function desenhar() {
     const [cls, texto] = faixa(P);
     document.getElementById('situacao').innerHTML = `<p class="aviso ${cls}">${texto}</p>`;
     document.getElementById('cards').innerHTML = P.planos.map(cartao).join('');
+    document.getElementById('cobrancas').innerHTML = cobrancas();
   }
 
   async function carregar() { P = await webApi('/planos'); desenhar(); }

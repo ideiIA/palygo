@@ -250,6 +250,9 @@ def test_assinar_cria_cliente_e_assinatura_no_asaas(s, fabrica, asaas):
     # o CPF não é guardado em lugar nenhum do banco
     assert "52998224725" not in str([getattr(a, c.name) for c in Assinatura.__table__.columns]) and "52998224725" not in (u.email + u.nome)
     assert s.scalar(select(Pagamento).where(Pagamento.assinatura_id == a.id)).invoice_url == "https://sandbox.asaas.com/i/abc"
+    # a pessoa reencontra a fatura (2ª via) em Meu plano
+    fatura = planos.resumo(s, u)["cobrancas"]
+    assert len(fatura) == 1 and fatura[0]["link"] == "https://sandbox.asaas.com/i/abc" and fatura[0]["status"] == "PENDING"
 
 
 def test_assinar_valida_dados(s, fabrica, asaas, monkeypatch):
