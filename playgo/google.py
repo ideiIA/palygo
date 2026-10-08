@@ -2,7 +2,7 @@
 
 Fluxo: /auth/google/iniciar → tela do Google → /auth/google/retorno?code=… → trocamos o código por um id_token direto com o
 Google (servidor a servidor, por TLS) e conferimos emissor, público, validade, nonce e e-mail verificado.
-Conta nova entra sem @usuario e sem aceite dos termos: o portão de `deps.py` leva a pessoa a escolher o @ e aceitar os termos/18+.
+Conta nova entra sem @usuario e sem aceite dos termos: o portão de `deps.py` leva a pessoa a escolher o @ e aceitar os termos.
 A foto do Google NÃO é copiada (a foto de perfil é escolha da pessoa)."""
 
 import base64

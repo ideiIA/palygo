@@ -15,7 +15,6 @@
     {% if erro %}<p class="aviso erro" style="margin:0">{{ erro }}</p>{% endif %}
     <p style="margin:0"><a href="/termos" target="_blank" rel="noopener">Ler os Termos de Uso</a> · <a href="/politica-de-privacidade" target="_blank" rel="noopener">Ler a Política de Privacidade</a></p>
     <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600"><input type="checkbox" name="aceito_termos" value="1" required style="margin-top:4px"> {{ declaracoes.termos }}</label>
-    <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600"><input type="checkbox" name="maior_de_idade" value="1" required style="margin-top:4px"> {{ declaracoes.maior_idade }}</label>
     <button class="btn purple">Aceitar e continuar</button>
     <p class="suave" style="margin:0;text-align:center">Não concorda? <button form="sair" class="link-botao" style="font-size:13px">Sair</button> — você pode também <a href="/privacidade">excluir a conta</a>.</p>
   </form>

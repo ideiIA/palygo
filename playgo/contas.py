@@ -42,7 +42,7 @@ def _registrar_aceite(s: SessaoORM, u: Usuario) -> None:
 
 
 def cadastrar(
-    s: SessaoORM, nome: str, email: str, senha: str, usuario: str, aceita_termos: bool = False, maior_idade: bool = False, consent_localizacao: bool = False
+    s: SessaoORM, nome: str, email: str, senha: str, usuario: str, aceita_termos: bool = False, consent_localizacao: bool = False
 ) -> Usuario:
     email = normalizar_email(email)
     if not nome.strip():
@@ -53,8 +53,6 @@ def cadastrar(
         raise ErroNegocio(f"A senha precisa ter pelo menos {seguranca.SENHA_MINIMA} caracteres.")
     if not aceita_termos:
         raise ErroNegocio("Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.")
-    if not maior_idade:
-        raise ErroNegocio("O PlayGo é destinado a maiores de 18 anos.")
     nome_usuario = validar_usuario(usuario)
     if s.scalar(select(Usuario.id).where(Usuario.email == email)):
         raise ErroNegocio("Já existe uma conta com esse e-mail.")
@@ -96,9 +94,9 @@ def pendencias(u: Usuario) -> str | None:
     return None
 
 
-def aceitar_termos(s: SessaoORM, u: Usuario, termos_ok: bool, maior_idade: bool) -> Usuario:
-    if not termos_ok or not maior_idade:
-        raise ErroNegocio("Para continuar, aceite os termos e confirme que tem 18 anos ou mais.")
+def aceitar_termos(s: SessaoORM, u: Usuario, termos_ok: bool) -> Usuario:
+    if not termos_ok:
+        raise ErroNegocio("Para continuar, aceite os Termos de Uso e a Política de Privacidade.")
     _registrar_aceite(s, u)
     s.commit()
     return u

@@ -44,7 +44,6 @@ class Cadastro(BaseModel):
     senha: str
     usuario: str
     aceito_termos: bool = False
-    maior_de_idade: bool = False
     consent_localizacao: bool = False
 
 
@@ -73,7 +72,6 @@ class PerfilIn(BaseModel):
 
 class AceiteIn(BaseModel):
     aceito_termos: bool = False
-    maior_de_idade: bool = False
 
 
 class UsuarioIn(BaseModel):
@@ -233,7 +231,7 @@ def provedores():
 
 @router.post("/auth/cadastro")
 def cadastro(corpo: Cadastro, s: Sessao):
-    u = contas.cadastrar(s, corpo.nome, corpo.email, corpo.senha, corpo.usuario, corpo.aceito_termos, corpo.maior_de_idade, corpo.consent_localizacao)
+    u = contas.cadastrar(s, corpo.nome, corpo.email, corpo.senha, corpo.usuario, corpo.aceito_termos, corpo.consent_localizacao)
     return {"token": seguranca.gerar_token(u.id), "usuario": contas.dados_publicos(u)}
 
 
@@ -258,7 +256,7 @@ def ver_termos():
 
 @router.post("/me/aceitar-termos")
 def aceitar_termos(corpo: AceiteIn, u: AtualApiLivre, s: Sessao):
-    contas.aceitar_termos(s, u, corpo.aceito_termos, corpo.maior_de_idade)
+    contas.aceitar_termos(s, u, corpo.aceito_termos)
     return contas.dados_publicos(u)
 
 

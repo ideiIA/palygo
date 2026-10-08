@@ -37,8 +37,8 @@ def tela_aceitar(request: Request, usuario: AtualLivre):
 
 
 @app.post("/termos/aceitar")
-def aceitar(request: Request, s: Sessao, usuario: AtualLivre, aceito_termos: str = Form(""), maior_de_idade: str = Form("")):
-    contas.aceitar_termos(s, usuario, bool(aceito_termos), bool(maior_de_idade))
+def aceitar(request: Request, s: Sessao, usuario: AtualLivre, aceito_termos: str = Form("")):
+    contas.aceitar_termos(s, usuario, bool(aceito_termos))
     return RedirectResponse("/cadastro/completar" if not usuario.usuario else request.session.pop("next", "/"), status_code=303)
 
 

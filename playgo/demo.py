@@ -43,7 +43,7 @@ def popular(s: SessaoORM) -> str:
         return "Dados de demonstração já existem (use --refazer para recomeçar)."
 
     # ---- atletas
-    carlos = contas.cadastrar(s, "Carlos Almeida", DEMO_EMAIL, DEMO_SENHA, "carlos.cg", True, True, True)
+    carlos = contas.cadastrar(s, "Carlos Almeida", DEMO_EMAIL, DEMO_SENHA, "carlos.cg", True, True)
     contas.atualizar_perfil(s, carlos, cidade="Campo Grande", latitude=-20.4697, longitude=-54.6201, raio_km=10, notif_raio_km=5, disponibilidade=["noite", "fim_de_semana"])
     contas.definir_esportes(s, carlos, {_m(s, "futebol").id: "intermediario", _m(s, "volei").id: "iniciante", _m(s, "beach_tennis").id: "intermediario"})
 
@@ -51,7 +51,7 @@ def popular(s: SessaoORM) -> str:
     gostos = (("futebol", "futsal"), ("volei", "volei_de_areia"), ("beach_tennis", "tenis"), ("corrida", "caminhada"), ("futebol", "basquete"), ("volei", "futevolei"))
     for i, nome in enumerate(NOMES):
         slug = unicodedata.normalize('NFKD', nome.lower()).encode('ascii', 'ignore').decode()
-        u = contas.cadastrar(s, f"{nome} {'Silva Souza Lima Costa Rocha Dias'.split()[i % 6]}", f"{slug}@playgo.local", DEMO_SENHA, f"{slug}.cg", True, True, True)
+        u = contas.cadastrar(s, f"{nome} {'Silva Souza Lima Costa Rocha Dias'.split()[i % 6]}", f"{slug}@playgo.local", DEMO_SENHA, f"{slug}.cg", True, True)
         # Espalha os atletas num raio de ~4 km do centro
         contas.atualizar_perfil(s, u, cidade="Campo Grande", latitude=-20.4697 + ((i % 5) - 2) * 0.008, longitude=-54.6201 + ((i // 3) - 3) * 0.009, raio_km=12, notif_raio_km=6)
         esportes = {_m(s, c).id: ("intermediario" if (i + j) % 3 else "avancado") for j, c in enumerate(gostos[i % len(gostos)])}

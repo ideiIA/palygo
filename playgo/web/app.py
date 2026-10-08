@@ -186,10 +186,10 @@ def tela_cadastro(request: Request, usuario: Opcional):
 @app.post("/cadastro")
 def cadastro(
     request: Request, s: Sessao, nome: str = Form(), email: str = Form(), senha: str = Form(), usuario: str = Form(""), aceito_termos: str = Form(""),
-    maior_de_idade: str = Form(""), consent_localizacao: str = Form(""),
+    consent_localizacao: str = Form(""),
 ):
     try:
-        u = contas.cadastrar(s, nome, email, senha, usuario, bool(aceito_termos), bool(maior_de_idade), bool(consent_localizacao))
+        u = contas.cadastrar(s, nome, email, senha, usuario, bool(aceito_termos), bool(consent_localizacao))
     except ErroNegocio as e:
         return templates.TemplateResponse(
             request, "entrar.html", {"modo": "cadastro", "erro": str(e), "nome": nome, "email": email, "usuario": usuario, "declaracoes": termos.DECLARACOES}, status_code=400

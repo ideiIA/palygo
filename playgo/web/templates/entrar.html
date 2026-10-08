@@ -32,7 +32,6 @@
     <p class="suave" style="margin:-6px 0 0">Mínimo de 8 caracteres.</p>
     <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600;font-size:13px"><input type="checkbox" name="aceito_termos" value="1" required style="margin-top:3px">
       <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</a>, inclusive as regras de publicação e de moderação.</span></label>
-    <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600;font-size:13px"><input type="checkbox" name="maior_de_idade" value="1" required style="margin-top:3px"> <span>{{ declaracoes.maior_idade }}</span></label>
     <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600;font-size:13px"><input type="checkbox" name="consent_localizacao" value="1" style="margin-top:3px"> <span>{{ declaracoes.localizacao }}</span></label>
     {% endif %}
     <button class="btn purple">{{ 'Criar conta' if modo == 'cadastro' else 'Entrar' }}</button>

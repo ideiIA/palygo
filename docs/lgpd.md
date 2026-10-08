@@ -10,7 +10,7 @@ principalmente os prazos, a base legal de cada tratamento, a cláusula de respon
 |---|---|
 | Nome de usuário nas postagens e para convites | `Usuario.usuario` (único, minúsculo, 3–20, `a-z0-9_.`, reservados bloqueados). Obrigatório no cadastro; contas antigas são barradas até escolher (portão). Buscas expõem só `@usuario` e iniciais — nunca nome real nem e-mail. |
 | Termo de uso/responsabilidade ao entrar | `playgo/termos.py` (Termos de Uso + Política de Privacidade, versionados). Aceite obrigatório no cadastro e a cada nova `VERSAO` (portão no site e na API). Cada aceite grava `AceiteTermos` com versão, data, IP e aparelho. |
-| Maior de idade | Declaração obrigatória de 18+. **Menores não são suportados**; ver "Pendências". |
+| Idade | Sem declaração de 18+ (decisão de 09/10/2026). Os Termos pedem autorização do responsável para menores; ver "Pendências". |
 | Consentimento de localização | `consent_localizacao` (específico, opcional, revogável). Sem ele a API recusa guardar lat/lng no perfil. Revogar apaga a localização. |
 | Guardar todas as interações para resguardo em lei | Tabela `registros` (somente inserção, com **gatilho no Postgres** que recusa UPDATE/DELETE): usuário, ação, objeto, IP, porta, aparelho, data/hora, detalhes. Cobre cadastro, login (e falha), aceite, consentimento, atividades, participações, publicações, comentários, edições, exclusões, ocultações, análises, denúncias, convites, moderadores, comunidades, exportação e exclusão de conta. |
 | Excluir só na 1ª hora; depois só o admin esconde | `publicacoes.excluir` (janela `PLAYGO_JANELA_EXCLUSAO_MIN`, padrão 60). Depois: `ocultar` por moderador/admin. Excluído e oculto continuam **guardados** (ocultos do app). Vale para comentários também. |
@@ -51,7 +51,7 @@ principalmente os prazos, a base legal de cada tratamento, a cláusula de respon
 - **Chat de grupo** (`grupo_mensagens`) ainda não passa pela moderação nem pela IA; segue sem janela de exclusão. O mesmo vale para o "descrição" de atividades/grupos/arenas (texto do organizador).
 - **Registros**: gravam as ações principais; **não** são um log de acesso de todas as requisições. Para atender o art. 15 do Marco Civil por completo,
   mantenha também o log de acesso do proxy reverso por 6 meses. Atrás de proxy, ligue `PLAYGO_CONFIAR_PROXY=true` para registrar o IP real.
-- **Menores**: não suportados (declaração de 18+). Aceitar adolescentes exige desenho próprio (ECA Digital, consentimento dos responsáveis).
+- **Menores**: o cadastro não barra por idade; os Termos (itens 1 e 9) exigem autorização do responsável, mas o sistema **não verifica** idade nem consentimento. Pendente de parecer jurídico (LGPD art. 14, ECA Digital): consentimento parental verificável, limites de exposição (foto, @, localização) e moderação reforçada.
 - **Comunicação de incidente à ANPD**, DPO formal, RIPD e registro de operações de tratamento são processos da empresa, não do código.
 - O contato do encarregado (`PLAYGO_CONTATO_PRIVACIDADE`) e o nome do controlador (`PLAYGO_CONTROLADOR_NOME`) vêm com valor provisório: preencher.
 - Nomes reais ainda aparecem para participantes em listas antigas de grupos de esporte (mural, comunidades, atividades e campeonatos já usam `@usuario`).

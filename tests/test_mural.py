@@ -74,9 +74,7 @@ def test_nome_de_usuario(s, fabrica):
     with pytest.raises(ErroNegocio):  # já em uso
         contas.definir_usuario(s, fabrica.atleta("B"), u.usuario.upper())
     with pytest.raises(ErroNegocio):
-        contas.cadastrar(s, "X", "x@teste.local", "senha-de-teste-1", "novo.usuario", aceita_termos=False, maior_idade=True)
-    with pytest.raises(ErroNegocio):
-        contas.cadastrar(s, "X", "x@teste.local", "senha-de-teste-1", "novo.usuario", aceita_termos=True, maior_idade=False)
+        contas.cadastrar(s, "X", "x@teste.local", "senha-de-teste-1", "novo.usuario", aceita_termos=False)
 
 
 def test_busca_pelo_arroba_nao_expoe_nome(s, fabrica):
@@ -91,14 +89,14 @@ def test_pendencias_de_termos_e_usuario(s, fabrica):
     assert contas.pendencias(u) is None
     u.termos_versao = "2020-01-01"
     assert contas.pendencias(u) == "termos"
-    contas.aceitar_termos(s, u, True, True)
+    contas.aceitar_termos(s, u, True)
     assert contas.pendencias(u) is None
     u.usuario = None
     assert contas.pendencias(u) == "usuario"
 
 
 def test_localizacao_exige_consentimento_e_pode_ser_revogada(s, fabrica):
-    u = contas.cadastrar(s, "Sem Consent", "sc@teste.local", "senha-de-teste-1", "sem.consent", True, True, False)
+    u = contas.cadastrar(s, "Sem Consent", "sc@teste.local", "senha-de-teste-1", "sem.consent", True, False)
     with pytest.raises(ErroNegocio):
         contas.atualizar_perfil(s, u, latitude=-20.0, longitude=-54.0)
     contas.atualizar_perfil(s, u, consent_localizacao=True, latitude=-20.0, longitude=-54.0)

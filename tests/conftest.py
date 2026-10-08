@@ -65,7 +65,7 @@ def fabrica(s):
             return s.scalar(select(Modalidade).where(Modalidade.codigo == codigo))
 
         def atleta(self, nome="Atleta", esportes=(("futebol", "intermediario"),), lat=CENTRO[0], lng=CENTRO[1], **perfil):
-            u = contas.cadastrar(s, nome, f"{uuid.uuid4().hex[:10]}@teste.local", "senha-de-teste-1", f"u{uuid.uuid4().hex[:12]}", True, True, True)
+            u = contas.cadastrar(s, nome, f"{uuid.uuid4().hex[:10]}@teste.local", "senha-de-teste-1", f"u{uuid.uuid4().hex[:12]}", True, True)
             contas.atualizar_perfil(s, u, latitude=lat, longitude=lng, **perfil)
             contas.definir_esportes(s, u, {self.mod(c).id: n for c, n in esportes})
             return u

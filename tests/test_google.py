@@ -84,7 +84,7 @@ def test_conta_nova_entra_pendente_de_usuario_e_termos(banco, conta_google):
     # o portão leva a escolher o @ antes de qualquer coisa
     assert c.get("/", follow_redirects=False).headers["location"] == "/cadastro/completar"
     assert c.post("/cadastro/completar", data={"nome_usuario": "g" + uuid.uuid4().hex[:8]}, follow_redirects=False).headers["location"] == "/termos/aceitar"
-    assert c.post("/termos/aceitar", data={"aceito_termos": "1", "maior_de_idade": "1"}, follow_redirects=False).status_code == 303
+    assert c.post("/termos/aceitar", data={"aceito_termos": "1"}, follow_redirects=False).status_code == 303
     assert c.get("/mural").status_code == 200
     # e a mesma conta Google volta para o mesmo usuário
     c2 = TestClient(app)

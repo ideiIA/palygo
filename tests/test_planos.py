@@ -28,7 +28,7 @@ def _ja_existe_um_admin(banco):
         if not s.scalar(select(Usuario.id).where(Usuario.admin).limit(1)):
             from playgo import contas
 
-            a = contas.cadastrar(s, "Primeiro", f"{uuid.uuid4().hex[:8]}@t.local", "senha-de-teste-1", f"pri{uuid.uuid4().hex[:10]}", True, True, False)
+            a = contas.cadastrar(s, "Primeiro", f"{uuid.uuid4().hex[:8]}@t.local", "senha-de-teste-1", f"pri{uuid.uuid4().hex[:10]}", True, False)
             assert a.admin
 
 
@@ -230,7 +230,7 @@ def asaas(monkeypatch, s):
 def _admin_local(s):
     from playgo import contas
 
-    a = contas.cadastrar(s, "Admin Local", f"{uuid.uuid4().hex[:8]}@t.local", "senha-de-teste-1", f"adm{uuid.uuid4().hex[:10]}", True, True, False)
+    a = contas.cadastrar(s, "Admin Local", f"{uuid.uuid4().hex[:8]}@t.local", "senha-de-teste-1", f"adm{uuid.uuid4().hex[:10]}", True, False)
     a.admin = True
     s.commit()
     return a

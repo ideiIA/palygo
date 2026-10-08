@@ -173,8 +173,8 @@ def test_portao_de_termos_e_usuario_na_api(cliente):
     r = cliente.get("/api/v1/feed", headers=h)
     assert r.status_code == 403 and r.json()["detail"]["pendencia"] == "termos"
     assert cliente.get("/api/v1/me", headers=h).json()["pendencia"] == "termos"  # /me segue livre para o app se orientar
-    assert cliente.post("/api/v1/me/aceitar-termos", headers=h, json={"aceito_termos": True, "maior_de_idade": False}).status_code == 400
-    assert cliente.post("/api/v1/me/aceitar-termos", headers=h, json={"aceito_termos": True, "maior_de_idade": True}).json()["pendencia"] is None
+    assert cliente.post("/api/v1/me/aceitar-termos", headers=h, json={"aceito_termos": False}).status_code == 400
+    assert cliente.post("/api/v1/me/aceitar-termos", headers=h, json={"aceito_termos": True}).json()["pendencia"] is None
     assert cliente.get("/api/v1/feed", headers=h).status_code == 200
     with Session() as s:
         s.query(Usuario).filter(Usuario.id == u["id"]).update({Usuario.usuario: None})
@@ -262,14 +262,14 @@ def test_privacidade_pela_api(cliente):
 def _site(cliente, **extra):
     c = TestClient(cliente.app)
     email = f"{uuid.uuid4().hex[:10]}@teste.local"
-    dados = {"nome": "Carlos Almeida", "email": email, "senha": "senha-de-teste-1", "usuario": f"c{uuid.uuid4().hex[:12]}", "aceito_termos": "1", "maior_de_idade": "1"} | extra
+    dados = {"nome": "Carlos Almeida", "email": email, "senha": "senha-de-teste-1", "usuario": f"c{uuid.uuid4().hex[:12]}", "aceito_termos": "1"} | extra
     r = c.post("/cadastro", data=dados, follow_redirects=False)
     return c, r, dados
 
 
 def test_cadastro_do_site_exige_aceites_e_usuario(cliente):
     c = TestClient(cliente.app)
-    for faltando in ({"aceito_termos": ""}, {"maior_de_idade": ""}, {"usuario": "ab"}, {"usuario": "admin"}):
+    for faltando in ({"aceito_termos": ""}, {"usuario": "ab"}, {"usuario": "admin"}):
         _, r, _ = _site(cliente, **faltando)
         assert r.status_code == 400, faltando
     _, ok, dados = _site(cliente)
@@ -277,7 +277,7 @@ def test_cadastro_do_site_exige_aceites_e_usuario(cliente):
     _, repetido, _ = _site(cliente, usuario=dados["usuario"].upper())
     assert repetido.status_code == 400 and "em uso" in repetido.text
     pagina = c.get("/cadastro")
-    assert "Termos de Uso" in pagina.text and "18 anos" in pagina.text and 'name="usuario"' in pagina.text and 'name="consent_localizacao"' in pagina.text
+    assert "Termos de Uso" in pagina.text and "18 anos" not in pagina.text and "maior_de_idade" not in pagina.text and 'name="usuario"' in pagina.text and 'name="consent_localizacao"' in pagina.text
 
 
 def test_portao_do_site_e_telas_de_termos(cliente):
@@ -289,8 +289,9 @@ def test_portao_do_site_e_telas_de_termos(cliente):
         s.commit()
     r = c.get("/mural", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/termos/aceitar"
-    assert c.post("/termos/aceitar", data={"aceito_termos": "1"}, follow_redirects=False).status_code == 303 and "18 anos" in c.get("/termos/aceitar").text
-    c.post("/termos/aceitar", data={"aceito_termos": "1", "maior_de_idade": "1"})
+    assert c.post("/termos/aceitar", data={}, follow_redirects=False).status_code == 303 and c.get("/mural", follow_redirects=False).status_code == 303  # sem marcar, segue barrado
+    assert "18 anos" not in c.get("/termos/aceitar").text
+    c.post("/termos/aceitar", data={"aceito_termos": "1"})
     assert c.get("/mural").status_code == 200
     with Session() as s:
         s.query(Usuario).filter(Usuario.email == dados["email"]).update({Usuario.usuario: None})

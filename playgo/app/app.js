@@ -181,7 +181,7 @@
     const prov = await fetch(API + '/auth/provedores').then((r) => r.json()).catch(() => ({}));
     const falhouGoogle = /erro=google/.test(location.hash);
     const google = prov.google ? `<a class="btn suave bloco" href="/auth/google/iniciar?destino=app" style="margin-bottom:10px">Continuar com Google</a><p class="suave" style="text-align:center;margin:0 0 12px">ou ${cad ? 'crie a conta' : 'use seu e-mail'}</p>` : '';
-    const dec = (T && T.declaracoes) || { maior_idade: 'Declaro ter 18 anos ou mais.', localizacao: 'Autorizo guardar a localização do meu perfil (opcional).' };
+    const dec = (T && T.declaracoes) || { localizacao: 'Autorizo guardar a localização do meu perfil (opcional).' };
     montar(`<div class="entrada"><form class="cartao" id="f-entrar">
       <span class="marca">Play<span>Go</span></span>
       <h1>${cad ? 'Crie sua conta' : 'Entrar'}</h1>
@@ -192,7 +192,6 @@
       <div class="campo"><label>E-mail</label><input type="email" name="email" required autocomplete="${cad ? 'email' : 'username'}"></div>
       <div class="campo"><label>Senha</label><input type="password" name="senha" required minlength="${cad ? 8 : 1}" autocomplete="${cad ? 'new-password' : 'current-password'}"></div>
       ${cad ? `<label class="suave" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><input type="checkbox" name="aceito_termos" required style="margin-top:3px"><span>Li e aceito os <a href="#/documento/termos">Termos de Uso</a> e a <a href="#/documento/politica">Política de Privacidade</a>, inclusive as regras de publicação e moderação.</span></label>
-        <label class="suave" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><input type="checkbox" name="maior_de_idade" required style="margin-top:3px"><span>${esc(dec.maior_idade)}</span></label>
         <label class="suave" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px"><input type="checkbox" name="consent_localizacao" style="margin-top:3px"><span>${esc(dec.localizacao)}</span></label>` : ''}
       <button class="btn roxo bloco">${cad ? 'Criar conta' : 'Entrar'}</button>
       <p class="suave" style="text-align:center;margin-top:14px">${cad ? 'Já tem conta? <a href="#/entrar">Entrar</a>' : 'Ainda não tem conta? <a href="#/cadastro">Criar conta</a>'}</p>
@@ -201,7 +200,7 @@
         ev.preventDefault();
         const d = dadosForm(ev.target);
         try {
-          const corpo = cad ? { nome: d.nome, usuario: d.usuario, email: d.email, senha: d.senha, aceito_termos: !!d.aceito_termos, maior_de_idade: !!d.maior_de_idade, consent_localizacao: !!d.consent_localizacao } : d;
+          const corpo = cad ? { nome: d.nome, usuario: d.usuario, email: d.email, senha: d.senha, aceito_termos: !!d.aceito_termos, consent_localizacao: !!d.consent_localizacao } : d;
           const r = await post(cad ? '/auth/cadastro' : '/auth/entrar', corpo);
           estado.token = r.token; estado.usuario = r.usuario; guardar('playgo_token', r.token);
           location.hash = cad ? '#/perfil' : '#/';
@@ -866,18 +865,16 @@
 
   async function vAceite() {
     const T = await fetch(API + '/termos').then((r) => r.json()).catch(() => null);
-    const dec = (T && T.declaracoes) || { maior_idade: 'Declaro ter 18 anos ou mais.' };
     montar(`<div class="entrada"><form class="cartao" id="f-aceite"><span class="marca">Play<span>Go</span></span>
       <h1>Atualizamos nossos termos</h1>
       <p class="suave" style="margin:6px 0 12px">A versão <b>${esc(T ? T.versao : '')}</b> dos Termos de Uso e da Política de Privacidade traz regras de publicação, moderação e proteção de dados. Para continuar, leia e aceite.</p>
       <p style="margin-bottom:12px"><a href="#/documento/termos">Ler os Termos de Uso</a> · <a href="#/documento/politica">Ler a Política de Privacidade</a></p><div id="erro"></div>
       <label class="suave" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><input type="checkbox" name="aceito_termos" required style="margin-top:3px"><span>${esc((T && T.declaracoes.termos) || 'Li e aceito os Termos de Uso e a Política de Privacidade.')}</span></label>
-      <label class="suave" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px"><input type="checkbox" name="maior_de_idade" required style="margin-top:3px"><span>${esc(dec.maior_idade)}</span></label>
       <button class="btn roxo bloco">Aceitar e continuar</button>
       <button type="button" class="btn suave bloco" style="margin-top:8px" data-acao="sair">Sair</button></form></div>`, () => {
       $('#f-aceite').onsubmit = async (ev) => {
         ev.preventDefault(); const d = dadosForm(ev.target);
-        try { estado.usuario = await post('/me/aceitar-termos', { aceito_termos: !!d.aceito_termos, maior_de_idade: !!d.maior_de_idade }); location.hash = '#/'; rotear(); }
+        try { estado.usuario = await post('/me/aceitar-termos', { aceito_termos: !!d.aceito_termos }); location.hash = '#/'; rotear(); }
         catch (e) { $('#erro').innerHTML = `<p class="aviso erro">${esc(e.message)}</p>`; }
       };
     });

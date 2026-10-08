@@ -5,11 +5,10 @@ CDC; **precisa de revisão jurídica antes de ir para produção** (ver docs/lgp
 
 from .config import settings
 
-VERSAO = "2026-10-09"
+VERSAO = "2026-10-10"
 
 DECLARACOES = {
     "termos": "Li e aceito os Termos de Uso e a Política de Privacidade, inclusive as regras de publicação e de moderação.",
-    "maior_idade": "Declaro ter 18 anos ou mais.",
     "localizacao": "Autorizo o PlayGo a guardar a localização do meu perfil para mostrar atividades perto de mim (opcional; posso revogar a qualquer momento).",
 }
 
@@ -17,7 +16,7 @@ DECLARACOES = {
 def termos_de_uso() -> list[dict]:
     return [
         {"titulo": "1. Quem pode usar", "paragrafos": [
-            "O PlayGo conecta atletas, organizadores e arenas. Para criar conta, você declara ter 18 anos ou mais e informar dados verdadeiros.",
+            "O PlayGo conecta atletas, organizadores e arenas. Para criar conta, você deve informar dados verdadeiros. Menores de 18 anos só podem usar o PlayGo com o conhecimento e a autorização de pai, mãe ou responsável legal, que responde pela conta (veja o item 9 da Política de Privacidade).",
             "Você é responsável por manter sua senha em sigilo e por tudo o que for feito na sua conta.",
         ]},
         {"titulo": "2. Nome de usuário", "paragrafos": [
@@ -95,6 +94,9 @@ def politica_de_privacidade() -> list[dict]:
         ]},
         {"titulo": "7. Cookies", "paragrafos": ["Usamos apenas um cookie essencial de sessão, necessário para você permanecer conectado. Não usamos cookies de publicidade."]},
         {"titulo": "8. Segurança", "paragrafos": ["Senhas criptografadas, tráfego protegido, acesso restrito a mídias e trilha de auditoria somente de inserção. Se houver incidente relevante, comunicaremos você e a ANPD conforme a lei."]},
-        {"titulo": "9. Crianças e adolescentes", "paragrafos": ["O PlayGo é destinado a maiores de 18 anos."]},
+        {"titulo": "9. Crianças e adolescentes", "paragrafos": [
+            "Menores de 18 anos podem participar de atividades e campeonatos para a sua faixa etária, sempre com o conhecimento e a autorização de pai, mãe ou responsável legal, que responde pela conta e pelo tratamento dos dados do menor, no melhor interesse da criança ou do adolescente (LGPD, art. 14).",
+            "O responsável pode pedir a qualquer momento acesso, correção ou exclusão dos dados do menor em " + settings.contato_privacidade + ", e a moderação remove conteúdos que exponham menores de forma indevida.",
+        ]},
         {"titulo": "10. Mudanças", "paragrafos": [f"Esta política tem versão ({VERSAO}); mudanças relevantes exigem novo aceite."]},
     ]
