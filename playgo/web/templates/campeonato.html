@@ -16,11 +16,11 @@
 <link rel="stylesheet" href="/static/chaves.css">
 {{ abas(k, 'geral') }}
 
-{% if ms.estado == 'convidado' %}
-<p class="aviso" style="background:#f0edff;border:1px solid #d6ccff;display:flex;gap:10px;align-items:center;flex-wrap:wrap">Você foi convidado para uma equipe deste campeonato.
-  <span style="display:flex;gap:6px"><form method="post" action="/equipes/{{ ms.equipe_id }}/responder"><input type="hidden" name="aceitar" value="1"><button class="btn purple pequeno">Aceitar</button></form>
-  <form method="post" action="/equipes/{{ ms.equipe_id }}/responder"><input type="hidden" name="aceitar" value="0"><button class="btn perigo pequeno">Recusar</button></form></span></p>
-{% endif %}
+{% for cv in ms.convites %}
+<p class="aviso" style="background:#f0edff;border:1px solid #d6ccff;display:flex;gap:10px;align-items:center;flex-wrap:wrap">Você foi convidado para a equipe <b>{{ cv.equipe }}</b> deste campeonato.
+  <span style="display:flex;gap:6px"><form method="post" action="/equipes/{{ cv.equipe_id }}/responder"><input type="hidden" name="aceitar" value="1"><button class="btn purple pequeno">Aceitar</button></form>
+  <form method="post" action="/equipes/{{ cv.equipe_id }}/responder"><input type="hidden" name="aceitar" value="0"><button class="btn perigo pequeno">Recusar</button></form></span></p>
+{% endfor %}
 
 <div class="two">
   <div class="panel">
@@ -37,8 +37,9 @@
     {% if k.descricao %}<h3 style="margin-top:18px">Sobre</h3><p>{{ k.descricao }}</p>{% endif %}
     {% if k.regulamento %}<h3 style="margin-top:14px">Regulamento</h3><p style="white-space:pre-line">{{ k.regulamento }}</p>{% endif %}
 
-    {% if k.inscricoes_abertas and ms.estado == 'fora' %}
-    <h3 style="margin-top:22px">Inscrever minha equipe</h3>
+    {% if k.inscricoes_abertas %}
+    {% if ms.equipes %}<p class="suave" style="margin-top:18px">Você está em: {% for e in ms.equipes %}<b>{{ e.nome }}</b>{{ ', ' if not loop.last }}{% endfor %}. Dá para inscrever outra equipe.</p>{% endif %}
+    <h3 style="margin-top:22px">{{ 'Inscrever outra equipe' if ms.equipes else 'Inscrever minha equipe' }}</h3>
     <form method="post" action="/campeonatos/{{ k.id }}/equipes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <input name="nome" required maxlength="100" placeholder="Nome da equipe" style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:12px;padding:12px">
       <button class="btn purple">Inscrever equipe</button>

@@ -153,13 +153,14 @@ def definir_status(s: SessaoORM, campeonato_id: int, por: Usuario, status: str) 
 # ---------------------------------------------------------------- equipes
 
 
-def _equipe_do_atleta(s: SessaoORM, c: Campeonato, usuario_id: int) -> Equipe | None:
-    return s.scalar(
+def _equipes_do_atleta(s: SessaoORM, c: Campeonato, usuario_id: int) -> list[Equipe]:
+    """Uma pessoa pode estar em mais de uma equipe do mesmo campeonato (ex.: categorias ou duplas diferentes)."""
+    return list(s.scalars(
         select(Equipe)
         .join(EquipeMembro, EquipeMembro.equipe_id == Equipe.id)
         .where(Equipe.campeonato_id == c.id, Equipe.status.in_(ATIVAS_EQUIPE), EquipeMembro.usuario_id == usuario_id, EquipeMembro.status == M_CONFIRMADO)
-        .limit(1)
-    )
+        .order_by(Equipe.id)
+    ))
 
 
 def inscrever_equipe(s: SessaoORM, campeonato_id: int, capitao: Usuario, nome: str, convidados: list[int] | None = None) -> Equipe:
@@ -173,8 +174,6 @@ def inscrever_equipe(s: SessaoORM, campeonato_id: int, capitao: Usuario, nome: s
         raise ErroNegocio("Todas as vagas do campeonato foram preenchidas.")
     if not nome.strip():
         raise ErroNegocio("Dê um nome à equipe.")
-    if _equipe_do_atleta(s, c, capitao.id):
-        raise ErroNegocio("Você já está em uma equipe deste campeonato.")
     if s.scalar(select(Equipe.id).where(Equipe.campeonato_id == c.id, Equipe.status.in_(ATIVAS_EQUIPE), func.lower(Equipe.nome) == nome.strip().lower())):
         raise ErroNegocio("Já existe uma equipe com esse nome neste campeonato.")
     e = Equipe(campeonato_id=c.id, capitao_id=capitao.id, nome=nome.strip())
@@ -206,8 +205,6 @@ def convidar(s: SessaoORM, equipe_id: int, por: Usuario, usuario_id: int, _commi
     ocupados = s.scalar(select(func.count()).select_from(EquipeMembro).where(EquipeMembro.equipe_id == e.id, EquipeMembro.status != M_RECUSADO)) or 0
     if ocupados >= c.atletas_por_equipe:
         raise ErroNegocio(f"A equipe já tem os {c.atletas_por_equipe} atletas.")
-    if _equipe_do_atleta(s, c, alvo.id):
-        raise ErroNegocio(f"{alvo.nome} já está em uma equipe deste campeonato.")
     if m is None:
         m = EquipeMembro(equipe_id=e.id, usuario_id=alvo.id, status=M_CONVIDADO)
         s.add(m)
@@ -223,8 +220,6 @@ def responder_convite(s: SessaoORM, equipe_id: int, usuario: Usuario, aceitar: b
     m = s.get(EquipeMembro, (equipe_id, usuario.id))
     if m is None or m.status != M_CONVIDADO:
         raise NaoEncontrado("Convite não encontrado.")
-    if aceitar and _equipe_do_atleta(s, m.equipe.campeonato, usuario.id):
-        raise ErroNegocio("Você já está em uma equipe deste campeonato.")
     m.status = M_CONFIRMADO if aceitar else M_RECUSADO
     notificacoes.avisar(
         s, m.equipe.capitao_id, "equipe", f"{usuario.nome} {'aceitou' if aceitar else 'recusou'} o convite para {m.equipe.nome}", "", f"/campeonatos/{m.equipe.campeonato_id}", None, f"resp:{equipe_id}:{usuario.id}:{agora().strftime('%d%H%M%S')}"
@@ -257,15 +252,23 @@ def cancelar_equipe(s: SessaoORM, equipe_id: int, por: Usuario) -> None:
 
 
 def minha_situacao(s: SessaoORM, c: Campeonato, usuario: Usuario) -> dict:
-    """Onde o atleta está neste campeonato: capitão, convidado ou fora."""
-    e = _equipe_do_atleta(s, c, usuario.id)
-    if e is None:
-        convite = s.scalar(
-            select(EquipeMembro).join(Equipe, Equipe.id == EquipeMembro.equipe_id)
-            .where(Equipe.campeonato_id == c.id, Equipe.status.in_(ATIVAS_EQUIPE), EquipeMembro.usuario_id == usuario.id, EquipeMembro.status == M_CONVIDADO)
-        )
-        return {"estado": "convidado" if convite else "fora", "equipe_id": convite.equipe_id if convite else None}
-    return {"estado": "capitao" if e.capitao_id == usuario.id else "jogador", "equipe_id": e.id}
+    """Onde o atleta está neste campeonato. Pode estar em várias equipes e ter vários convites ao mesmo tempo.
+    `estado`/`equipe_id` seguem como resumo (primeira equipe, senão primeiro convite, senão fora)."""
+    equipes = _equipes_do_atleta(s, c, usuario.id)
+    convites = list(s.scalars(
+        select(EquipeMembro).join(Equipe, Equipe.id == EquipeMembro.equipe_id)
+        .where(Equipe.campeonato_id == c.id, Equipe.status.in_(ATIVAS_EQUIPE), EquipeMembro.usuario_id == usuario.id, EquipeMembro.status == M_CONVIDADO)
+        .order_by(EquipeMembro.equipe_id)
+    ))
+    lista = [{"id": e.id, "nome": e.nome, "papel": "capitao" if e.capitao_id == usuario.id else "jogador"} for e in equipes]
+    pendentes = [{"equipe_id": m.equipe_id, "equipe": m.equipe.nome} for m in convites]
+    if equipes:
+        estado, eid = lista[0]["papel"], equipes[0].id
+    elif convites:
+        estado, eid = "convidado", convites[0].equipe_id
+    else:
+        estado, eid = "fora", None
+    return {"estado": estado, "equipe_id": eid, "equipes": lista, "convites": pendentes}
 
 
 def contar_pendentes(s: SessaoORM, c: Campeonato) -> int:

@@ -43,12 +43,15 @@ def test_campeonato_avisa_atletas_proximos_do_esporte(s, fabrica):
 
 def test_inscricao_de_equipe_convites_e_vagas(s, fabrica):
     org = fabrica.atleta("Org")
-    c = _camp(s, fabrica, org, max_equipes=2)
+    c = _camp(s, fabrica, org, max_equipes=3)
     cap1, cap2, cap3, jogador = (fabrica.atleta(n, esportes=(("futsal", "intermediario"),)) for n in ("Cap1", "Cap2", "Cap3", "Jog"))
 
     e1 = campeonatos.inscrever_equipe(s, c.id, cap1, "Os Craques")
+    campeonatos.inscrever_equipe(s, c.id, cap1, "Outra")  # a mesma pessoa pode inscrever mais de uma equipe
+    ms = campeonatos.minha_situacao(s, c, cap1)
+    assert [e["nome"] for e in ms["equipes"]] == ["Os Craques", "Outra"] and ms["estado"] == "capitao"
     with pytest.raises(ErroNegocio):
-        campeonatos.inscrever_equipe(s, c.id, cap1, "Outra")  # já está em uma equipe
+        campeonatos.inscrever_equipe(s, c.id, cap1, "OUTRA")  # nome repetido continua barrado
     with pytest.raises(ErroNegocio):
         campeonatos.inscrever_equipe(s, c.id, cap2, "os craques")  # nome repetido
     campeonatos.inscrever_equipe(s, c.id, cap2, "Rivais")
@@ -75,17 +78,23 @@ def test_inscricao_de_equipe_convites_e_vagas(s, fabrica):
     assert campeonatos.inscrever_equipe(s, c.id, cap3, "Terceira").status == "pendente"
 
 
-def test_convidado_nao_pode_estar_em_duas_equipes_confirmadas(s, fabrica):
+def test_atleta_pode_estar_em_mais_de_uma_equipe_do_campeonato(s, fabrica):
     org = fabrica.atleta("Org")
     c = _camp(s, fabrica, org, max_equipes=4)
     cap1, cap2, jogador = fabrica.atleta("A"), fabrica.atleta("B"), fabrica.atleta("J")
     e1 = campeonatos.inscrever_equipe(s, c.id, cap1, "E1")
     e2 = campeonatos.inscrever_equipe(s, c.id, cap2, "E2")
     campeonatos.convidar(s, e1.id, cap1, jogador.id)
-    campeonatos.convidar(s, e2.id, cap2, jogador.id)  # convites podem se sobrepor…
+    campeonatos.convidar(s, e2.id, cap2, jogador.id)
+    ms = campeonatos.minha_situacao(s, c, jogador)
+    assert [cv["equipe"] for cv in ms["convites"]] == ["E1", "E2"] and ms["estado"] == "convidado"
     campeonatos.responder_convite(s, e1.id, jogador, True)
-    with pytest.raises(ErroNegocio):
-        campeonatos.responder_convite(s, e2.id, jogador, True)  # …o aceite não
+    campeonatos.responder_convite(s, e2.id, jogador, True)  # a mesma pessoa joga por duas equipes
+    ms = campeonatos.minha_situacao(s, c, jogador)
+    assert [e["nome"] for e in ms["equipes"]] == ["E1", "E2"] and ms["convites"] == []
+    with pytest.raises(ErroNegocio):  # mas na mesma equipe só entra uma vez: o limite de atletas continua valendo
+        for i in range(c.atletas_por_equipe):
+            campeonatos.convidar(s, e1.id, cap1, fabrica.atleta(f"X{i}").id)
 
 
 def test_inscricao_encerrada(s, fabrica):
