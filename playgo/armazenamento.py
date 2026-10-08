@@ -32,7 +32,10 @@ def usa_supabase() -> bool:
 
 def _cabecalhos(extra: dict | None = None) -> dict:
     chave = settings.supabase_service_key
-    return {"Authorization": f"Bearer {chave}", "apikey": chave, **(extra or {})}
+    cab = {"apikey": chave, **(extra or {})}
+    if chave.startswith("eyJ"):  # chave legada (JWT service_role): vai também como Bearer. As novas (sb_secret_…) só no apikey.
+        cab["Authorization"] = f"Bearer {chave}"
+    return cab
 
 
 def _base() -> str:

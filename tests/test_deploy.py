@@ -29,7 +29,7 @@ def supabase(monkeypatch):
         return httpx.Response(200, json={"ok": True})
 
     monkeypatch.setattr(settings, "supabase_url", "https://abc.supabase.co")
-    monkeypatch.setattr(settings, "supabase_service_key", "chave-de-servico")
+    monkeypatch.setattr(settings, "supabase_service_key", "eyJ.chave.de-servico")
     monkeypatch.setattr(settings, "armazenamento", "")
     monkeypatch.setattr(armazenamento, "_http", lambda: httpx.Client(transport=httpx.MockTransport(handler)))
     return chamadas
@@ -37,6 +37,7 @@ def supabase(monkeypatch):
 
 def test_escolha_automatica_do_armazenamento(monkeypatch):
     assert not armazenamento.usa_supabase()  # testes: sem URL/chave → disco
+    monkeypatch.setattr(settings, "armazenamento", "")
     monkeypatch.setattr(settings, "supabase_url", "https://abc.supabase.co")
     monkeypatch.setattr(settings, "supabase_service_key", "k")
     assert armazenamento.usa_supabase()
@@ -48,7 +49,7 @@ def test_storage_salvar_ler_remover(supabase):
     armazenamento.salvar("2026/10/x.jpg", b"bytes", "image/jpeg")
     req = supabase[-1]
     assert req.method == "POST" and req.url.path == "/storage/v1/object/playgo-midia/2026/10/x.jpg"
-    assert req.headers["authorization"] == "Bearer chave-de-servico" and req.headers["apikey"] == "chave-de-servico"
+    assert req.headers["authorization"] == "Bearer eyJ.chave.de-servico" and req.headers["apikey"] == "eyJ.chave.de-servico"
     assert req.headers["content-type"] == "image/jpeg" and req.headers["x-upsert"] == "true" and req.content == b"bytes"
 
     assert armazenamento.ler("2026/10/x.jpg") == b"conteudo-do-arquivo"
@@ -156,3 +157,9 @@ def test_entrada_do_vercel_exporta_o_app():
     assert modulo.app.title == "PlayGo"
     config = json.loads((arquivo.parent.parent / "vercel.json").read_text(encoding="utf-8"))
     assert config["rewrites"][0]["destination"] == "/api/index" and config["crons"][0]["path"] == "/api/v1/cron/ciclo"
+
+
+def test_chave_nova_do_supabase_vai_so_no_apikey(monkeypatch, supabase):
+    monkeypatch.setattr(settings, "supabase_service_key", "sb_secret_abc123")
+    armazenamento.salvar("a.jpg", b"x", "image/jpeg")
+    assert supabase[-1].headers["apikey"] == "sb_secret_abc123" and "authorization" not in supabase[-1].headers

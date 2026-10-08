@@ -25,7 +25,7 @@ O repositório é **público**. Ficam de fora (`.gitignore`): `PlayGO.docx`, o p
 2. **Settings → Data API**: copie a *Project URL* (`https://<ref>.supabase.co`).
 3. **Settings → API Keys**: copie a chave **service_role** (secreta; nunca vai para o navegador nem para o git).
 4. **Connect → Transaction pooler**: copie a string de conexão e ajuste o início para `postgresql+psycopg://`.
-5. Crie o arquivo `.env` (gitignored) na raiz:
+5. Crie o arquivo `.env.producao` (gitignored) na raiz — **separado do `.env`**, para o seu servidor local nunca gravar no banco de produção:
 
 ```
 PLAYGO_DATABASE_URL=postgresql+psycopg://postgres.<ref>:<SENHA>@aws-0-sa-east-1.pooler.supabase.com:6543/postgres
@@ -36,7 +36,7 @@ PLAYGO_SUPABASE_SERVICE_KEY=<service_role>
 6. Prepare o banco e o Storage (uma vez; repita ao atualizar o esquema):
 
 ```powershell
-.venv\Scripts\python -m playgo supabase
+$env:PLAYGO_ENV_FILE = ".env.producao"; .venv\Scripts\python -m playgo supabase
 ```
 
 Isso cria as tabelas, o gatilho da trilha de auditoria, as modalidades, **liga o RLS em todas as tabelas sem política** (a API pública do

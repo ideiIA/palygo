@@ -4,6 +4,7 @@ Uso: `python -m playgo supabase` (com PLAYGO_DATABASE_URL e, para o bucket, PLAY
 Por que o RLS: o Supabase expõe as tabelas do schema `public` por uma API REST aberta pela chave pública (anon).
 Ligar o RLS **sem nenhuma política** fecha essa porta: só o nosso servidor, que conecta como dono do banco, enxerga os dados."""
 
+import httpx
 from sqlalchemy import text
 
 from . import armazenamento, modalidades
@@ -26,5 +27,8 @@ def preparar() -> list[str]:
             c.execute(text(f'REVOKE ALL ON ALL TABLES IN SCHEMA public FROM "{papel}"'))
             c.execute(text(f'REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM "{papel}"'))
     avisos.append(f"RLS ligado em {len(tabelas)} tabela(s), sem políticas; acesso público revogado ({', '.join(sorted(papeis)) or 'sem papéis anon/authenticated neste banco'}).")
-    avisos.append(armazenamento.garantir_bucket())
+    try:
+        avisos.append(armazenamento.garantir_bucket())
+    except httpx.HTTPError as e:
+        avisos.append(f"ATENÇÃO: o bucket NÃO foi criado ({e.__class__.__name__}: confira PLAYGO_SUPABASE_URL e PLAYGO_SUPABASE_SERVICE_KEY). Rode de novo depois de corrigir.")
     return avisos

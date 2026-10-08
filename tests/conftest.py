@@ -12,6 +12,9 @@ os.environ["PLAYGO_PASTA_UPLOADS"] = tempfile.mkdtemp(prefix="playgo_uploads_")
 os.environ["PLAYGO_ANTHROPIC_API_KEY"] = ""  # os testes nunca chamam uma IA de verdade
 os.environ["PLAYGO_GEMINI_API_KEY"] = ""
 os.environ["PLAYGO_IA_PROVEDOR"] = ""
+os.environ["PLAYGO_ARMAZENAMENTO"] = "local"  # nunca grava no Storage de produção
+os.environ["PLAYGO_SUPABASE_URL"] = ""
+os.environ["PLAYGO_SUPABASE_SERVICE_KEY"] = ""
 
 import pytest
 from sqlalchemy import create_engine, select, text

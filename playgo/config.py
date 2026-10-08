@@ -7,7 +7,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=RAIZ / ".env", env_prefix="PLAYGO_", extra="ignore")
+    model_config = SettingsConfigDict(env_file=RAIZ / os.environ.get("PLAYGO_ENV_FILE", ".env"), env_prefix="PLAYGO_", extra="ignore")
 
     database_url: str = "postgresql+psycopg://playgo@localhost:5434/playgo"
 

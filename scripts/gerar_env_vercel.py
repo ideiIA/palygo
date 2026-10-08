@@ -1,5 +1,5 @@
 """Gera `.env.vercel` (ignorado pelo git) para colar em Vercel > Settings > Environment Variables ("Import .env").
-Lê o `.env` local, acrescenta o que o ambiente de produção exige e cria chaves aleatórias novas.
+Lê o `.env.producao`, acrescenta o que o ambiente de produção exige e cria chaves aleatórias novas.
 Uso: python scripts/gerar_env_vercel.py"""
 
 import secrets
@@ -22,10 +22,10 @@ def ler_env(arq: Path) -> dict[str, str]:
 
 
 def main() -> None:
-    env = ler_env(RAIZ / ".env")
+    env = ler_env(RAIZ / ".env.producao")
     faltam = [k for k in OBRIGATORIAS if k not in env]
     if faltam:
-        raise SystemExit("Faltam no .env: " + ", ".join(faltam) + "\n(veja docs/deploy.md, passo 2)")
+        raise SystemExit("Faltam no .env.producao: " + ", ".join(faltam) + "\n(veja docs/deploy.md, passo 2)")
     url = env["PLAYGO_DATABASE_URL"]
     if "pooler.supabase.com" not in url and ":6543/" not in url:
         print("AVISO: no Vercel use a string do POOLER do Supabase (porta 6543), não a conexão direta.")
