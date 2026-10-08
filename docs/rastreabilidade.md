@@ -15,7 +15,7 @@ Fonte: `PlayGO.docx`. Situação: ✅ feito · 🟡 parcial · ⏭ fase posterio
 | RF-006 Agenda das quadras | ✅ | `arenas.agenda_do_dia` (grade igual ao protótipo) |
 | RF-007 / RF-021 Criar campeonato | ✅ | `campeonatos.criar` |
 | RF-008 Inscrição de equipes, capitão convida | ✅ | `campeonatos.inscrever_equipe/convidar/responder_convite` |
-| RF-009 Tabelas, confrontos, classificação, campeão | ⏭ | "posteriormente" no projeto |
+| RF-009 Tabelas, confrontos, classificação, campeão | ✅ | `chaves.py`: sorteio (eliminatória ou pontos corridos), chaves, classificação, campeão, jogo ao vivo com placar e mesários; sub-páginas do campeonato (site e app) |
 | RF-010 Descoberta geográfica de atividades, grupos, campeonatos, arenas | ✅ | `descoberta.explorar` |
 | RF-011 Mapa esportivo com filtros | ✅ | Explorar (site e app), Leaflet/OSM |
 | RF-012 Múltiplas modalidades sem mudar a aplicação | ✅ | tabela `modalidades` |

@@ -1,0 +1,9 @@
+{# Abas das sub-páginas do campeonato. Uso: {% from "_camp_abas.html" import abas %}{{ abas(k, 'chaves') }} #}
+{% macro abas(k, ativa) %}
+<nav class="ch-abas" aria-label="Seções do campeonato">
+  <a href="/campeonatos/{{ k.id }}" class="{{ 'ativa' if ativa == 'geral' }}">Visão geral</a>
+  <a href="/campeonatos/{{ k.id }}/chaves" class="{{ 'ativa' if ativa == 'chaves' }}">🏆 Chaves</a>
+  <a href="/campeonatos/{{ k.id }}/ao-vivo" class="{{ 'ativa' if ativa in ('ao_vivo', 'jogo') }}">🔴 Ao vivo</a>
+  {% if k.sou_gestor %}<a href="/campeonatos/{{ k.id }}/sorteio" class="{{ 'ativa' if ativa == 'sorteio' }}">🎲 Sorteio</a>{% endif %}
+</nav>
+{% endmacro %}

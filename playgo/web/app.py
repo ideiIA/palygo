@@ -34,6 +34,7 @@ from .. import (
     vagas,
 )
 from .. import serializadores as ser
+from ..api.chaves import router as api_chaves
 from ..api.mural import router as api_mural
 from ..api.planos import router as api_planos
 from ..api.v1 import router as api_v1
@@ -66,6 +67,7 @@ app.mount("/app", StaticFiles(directory=PASTA.parent / "app", html=True), name="
 app.include_router(api_v1)
 app.include_router(api_mural)
 app.include_router(api_planos)
+app.include_router(api_chaves)
 templates = Jinja2Templates(directory=PASTA / "templates")
 
 
@@ -605,4 +607,4 @@ def marcar_lidas(s: Sessao, usuario: Atual):
 
 
 # Rotas do mural, comunidades, termos e privacidade vivem em outro módulo (importado aqui no fim para evitar ciclo).
-from . import rotas_google, rotas_mural  # noqa: E402,F401
+from . import rotas_chaves, rotas_google, rotas_mural  # noqa: E402,F401

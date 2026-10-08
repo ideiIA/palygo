@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_camp_abas.html" import abas %}
+{% block titulo %}{{ {'chaves': 'Chaves', 'ao_vivo': 'Ao vivo', 'jogo': 'Jogo', 'sorteio': 'Sorteio'}[modo] }} — {{ k.nome }} — PlayGo{% endblock %}
+{% block conteudo %}
+<link rel="stylesheet" href="/static/chaves.css">
+<div class="detalhe-topo">
+  <div>
+    <span class="tag {{ k.modalidade.cor }}">{{ k.modalidade.icone }} {{ k.modalidade.nome|upper }}</span>
+    <h1>🏆 {{ k.nome }}</h1>
+  </div>
+</div>
+{{ abas(k, modo) }}
+<div id="conteudo" style="max-width:{{ '1100px' if modo == 'chaves' else '760px' }}"><p class="suave">Carregando…</p></div>
+<script src="/static/chaves.js"></script>
+<script>
+  window.addEventListener('load', function () {  // web.js e o resto carregam com defer
+    const el = document.getElementById('conteudo');
+    const get = (c) => webApi(c);
+    const post = (c, corpo) => webApi(c, { metodo: 'POST', corpo: corpo || {} });
+    const apagar = (c) => webApi(c, { metodo: 'DELETE' });
+    const id = {{ k.id }};
+    const href = (j) => '/campeonatos/' + id + '/jogos/' + j.id;
+    {% if modo == 'chaves' %}Chaves.montarChaves(el, { get, href, id });
+    {% elif modo == 'ao_vivo' %}Chaves.montarAoVivo(el, { get, href, id });
+    {% elif modo == 'jogo' %}el.insertAdjacentHTML('beforebegin', '<p><a href="/campeonatos/' + id + '/chaves">← Voltar às chaves</a></p>');
+    Chaves.montarJogo(el, { get, post, id, jogo: {{ jogo_id }}, toast: window.toast });
+    {% else %}Chaves.montarSorteio(el, { get, post, apagar, id, toast: window.toast, aoSortear: () => (location.href = '/campeonatos/' + id + '/chaves') });{% endif %}
+  });
+</script>
+{% endblock %}

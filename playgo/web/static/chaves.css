@@ -1,0 +1,69 @@
+/* PlayGo — sorteio, chaves e jogo ao vivo (site e PWA) */
+.ch-abas { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0 18px; border-bottom: 1px solid var(--border, #e9eaf0); padding-bottom: 10px; }
+.ch-abas a { padding: 8px 14px; border-radius: 999px; font-weight: 800; font-size: 14px; color: var(--muted, #667085); text-decoration: none; background: transparent; }
+.ch-abas a.ativa { background: var(--purple, #6c4cff); color: #fff; }
+.ch-vazio { padding: 28px 16px; text-align: center; color: var(--muted, #667085); background: #fff; border: 1px dashed var(--border, #e9eaf0); border-radius: 14px; }
+.ch-sub { font-size: 12px; color: var(--muted, #667085); }
+.ch-tbd { color: var(--muted, #667085); font-weight: 600; }
+.ch-tit { margin: 22px 0 10px; font-size: 16px; }
+.ch-campeao { background: linear-gradient(135deg, #fff6d6, #ffe9a8); border: 1px solid #f2d36b; color: #7a5a00; padding: 14px 16px; border-radius: 14px; font-size: 17px; margin-bottom: 14px; }
+.ch-aovivo { background: #fff3f3; border: 1px solid #ffd4d6; border-radius: 14px; padding: 12px; margin-bottom: 16px; display: grid; gap: 8px; }
+
+/* chave eliminatória: uma coluna por rodada, com os jogos distribuídos na vertical */
+.ch-chave { display: flex; gap: 18px; overflow-x: auto; padding-bottom: 12px; align-items: stretch; }
+.ch-coluna { min-width: 220px; flex: 1 0 220px; display: flex; flex-direction: column; }
+.ch-coluna h4 { margin: 0 0 8px; text-align: center; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #667085); }
+.ch-col-jogos { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 10px; }
+.ch-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+
+.ch-jogo { display: block; background: #fff; border: 1px solid var(--border, #e9eaf0); border-radius: 12px; padding: 8px 10px; color: inherit; text-decoration: none; box-shadow: 0 1px 2px rgba(20, 33, 61, .05); }
+.ch-jogo:hover { border-color: var(--purple, #6c4cff); }
+.ch-jogo.ao_vivo { border-color: #ff3b47; box-shadow: 0 0 0 2px rgba(255, 59, 71, .15); }
+.ch-linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; font-size: 14px; }
+.ch-linha + .ch-linha { border-top: 1px solid var(--border, #e9eaf0); }
+.ch-linha.venceu .ch-nome { font-weight: 900; }
+.ch-linha:not(.venceu) .ch-nome { font-weight: 600; }
+.ch-pl { font-size: 17px; min-width: 22px; text-align: right; }
+.ch-rod { margin-top: 4px; font-size: 12px; }
+.ch-vivo { color: #e5252f; font-weight: 900; animation: ch-pisca 1.2s infinite; }
+@keyframes ch-pisca { 50% { opacity: .35; } }
+
+.ch-tabela-wrap { overflow-x: auto; }
+.ch-tabela { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--border, #e9eaf0); border-radius: 12px; overflow: hidden; font-size: 14px; }
+.ch-tabela th, .ch-tabela td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border, #e9eaf0); }
+.ch-tabela th { background: #f7f8fc; font-size: 12px; color: var(--muted, #667085); }
+.ch-tabela td.ch-eq { text-align: left; font-weight: 700; }
+
+/* jogo ao vivo */
+.jv-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.jv-status { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; background: #eef0f4; color: var(--muted, #667085); }
+.jv-status.ao_vivo { background: #ffe3e5; color: #e5252f; animation: ch-pisca 1.2s infinite; }
+.jv-status.encerrado { background: #e6fbf2; color: #008f5b; }
+.jv-placar { display: flex; align-items: center; justify-content: center; gap: 14px; background: #14213d; color: #fff; border-radius: 18px; padding: 22px 12px; }
+.jv-eq { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 6px; font-weight: 800; font-size: 16px; overflow-wrap: anywhere; }
+.jv-eq b { font-size: 56px; line-height: 1; }
+.jv-eq.venceu b { color: #b7f34b; }
+.jv-x { font-size: 24px; opacity: .6; }
+.jv-ctrl { margin: 14px 0; display: grid; gap: 10px; }
+.jv-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: center; }
+.jv-botoes > div > div { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
+.jv-agenda { display: flex; gap: 6px; flex-wrap: wrap; }
+.jv-agenda input, .jv-agenda select, .ch-campo input { flex: 1; min-width: 160px; border: 1px solid var(--border, #e9eaf0); border-radius: 10px; padding: 10px; font: inherit; }
+.jv-ev { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border, #e9eaf0); font-size: 14px; align-items: baseline; }
+.jv-ev.placar .jv-txt { font-weight: 800; }
+.jv-hora { color: var(--muted, #667085); font-size: 12px; min-width: 44px; }
+.jv-txt { flex: 1; }
+.jv-snap { background: #f0edff; color: var(--purple, #6c4cff); border-radius: 8px; padding: 2px 8px; }
+
+.ch-btn { border: 0; border-radius: 12px; padding: 10px 16px; font: inherit; font-weight: 800; cursor: pointer; background: var(--purple, #6c4cff); color: #fff; }
+.ch-btn.suave { background: #f0edff; color: var(--purple, #6c4cff); }
+.ch-btn.perigo { background: #ffe9ea; color: #d6303a; }
+.ch-btn.grande { font-size: 18px; padding: 14px 22px; }
+.ch-btn[disabled] { opacity: .5; cursor: not-allowed; }
+.ch-painel { background: #fff; border: 1px solid var(--border, #e9eaf0); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+.ch-painel h3 { margin: 0 0 6px; }
+.ch-campo { display: grid; gap: 8px; margin: 12px 0; }
+.ch-campo label { display: flex; gap: 8px; align-items: flex-start; }
+.ch-aviso { background: #fff7e0; border: 1px solid #f4dc9a; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+.ch-chip { display: inline-flex; gap: 6px; align-items: center; background: #f0edff; color: var(--purple, #6c4cff); border-radius: 999px; padding: 4px 10px; font-weight: 800; font-size: 13px; margin: 0 6px 6px 0; }
+.ch-chip button { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 16px; line-height: 1; }

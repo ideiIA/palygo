@@ -1,5 +1,5 @@
 """Campeonatos e torneios (RF-007, RF-008, RF-021, RF-022): cadastro, inscrição de equipes e convites.
-Tabelas, confrontos e classificação (RF-009) ficam para a fase seguinte, como no projeto."""
+Sorteio, chaves, classificação e jogo ao vivo (RF-009) ficam em `chaves.py`."""
 
 from dataclasses import dataclass
 from datetime import date

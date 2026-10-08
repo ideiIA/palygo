@@ -44,6 +44,11 @@ ORM alternativo ou framework de front sem pedido explícito.
 - **Produção = Vercel serverless + Supabase** (`docs/deploy.md`): arquivos só por `armazenamento.py` (nunca `Path.write_bytes` direto), nada de thread/estado em memória,
   tarefas periódicas só pelo endpoint de cron, limites de upload via `settings.limite_*_mb`. Tabelas do Supabase sempre com RLS ligado (`python -m playgo supabase`).
 
+- **Chaves e jogo ao vivo** (`chaves.py`, `api/chaves.py`, `web/rotas_chaves.py`, `static/chaves.js|css`): placar, início e fim só dentro de `chaves.py`, com o jogo travado por `_travar()`
+  (`populate_existing`, porque a sessão não expira ao salvar: relações como `jogo.equipe_a` ficam velhas — `_avancar` atualiza a relação e o id). Conduz quem `pode_gerir` ou é mesário
+  (`CampeonatoMesario`); qualquer pessoa logada só lê. Sem websocket (Vercel): a tela consulta a API a cada poucos segundos. A semente do sorteio é bigint — sempre em texto na API.
+  Teste que sobe `TestClient(app)` não pode usar a sessão `s` aberta ao mesmo tempo (o startup altera tabelas e trava): monte os dados pela API.
+
 ## Comandos
 
 ```powershell

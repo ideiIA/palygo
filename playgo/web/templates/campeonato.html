@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "_cards.html" as c %}
+{% from "_camp_abas.html" import abas %}
 {% block titulo %}{{ k.nome }} — PlayGo{% endblock %}
 {% block conteudo %}
 {% set ms = k.minha_situacao %}
@@ -11,6 +12,9 @@
     <div class="meta">Organizado por <b>{{ k.organizador.arroba }}</b>{% if k.categoria %} • {{ k.categoria }}{% endif %}</div>
   </div>
 </div>
+
+<link rel="stylesheet" href="/static/chaves.css">
+{{ abas(k, 'geral') }}
 
 {% if ms.estado == 'convidado' %}
 <p class="aviso" style="background:#f0edff;border:1px solid #d6ccff;display:flex;gap:10px;align-items:center;flex-wrap:wrap">Você foi convidado para uma equipe deste campeonato.
@@ -49,7 +53,7 @@
         {% for v, n in (('aberto','Inscrições abertas'),('em_andamento','Em andamento'),('encerrado','Encerrado'),('cancelado','Cancelado')) %}<option value="{{ v }}" {{ 'selected' if k.status == v }}>{{ n }}</option>{% endfor %}
       </select><button class="btn soft">Atualizar situação</button>
     </form>
-    <p class="suave">Tabelas, grupos, confrontos e classificação entram na próxima fase do projeto.</p>
+    <p class="suave">O sorteio do chaveamento, os mesários e a condução dos jogos ficam em <a href="/campeonatos/{{ k.id }}/sorteio">🎲 Sorteio</a>; todo mundo acompanha em <a href="/campeonatos/{{ k.id }}/chaves">Chaves</a> e <a href="/campeonatos/{{ k.id }}/ao-vivo">Ao vivo</a>.</p>
     {% endif %}
   </div>
 

@@ -2,6 +2,7 @@ from datetime import date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     Date,
@@ -410,6 +411,10 @@ class Campeonato(Base):
 
     status: Mapped[str] = mapped_column(String(14), default=C_ABERTO)
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=agora)
+    # Chaveamento: formato escolhido no sorteio (eliminatoria | pontos_corridos), quando foi e a semente (reproduz o sorteio)
+    formato: Mapped[str | None] = mapped_column(String(20))
+    sorteado_em: Mapped[datetime | None] = mapped_column(DateTime)
+    sorteio_semente: Mapped[int | None] = mapped_column(BigInteger)
 
     modalidade: Mapped[Modalidade] = relationship(lazy="joined")
     organizador: Mapped[Usuario] = relationship(lazy="joined")
@@ -444,6 +449,68 @@ class EquipeMembro(Base):
     status: Mapped[str] = mapped_column(String(10), default=M_CONVIDADO)
 
     equipe: Mapped[Equipe] = relationship(back_populates="membros")
+    usuario: Mapped[Usuario] = relationship(lazy="joined")
+
+
+J_AGENDADO, J_AO_VIVO, J_ENCERRADO = "agendado", "ao_vivo", "encerrado"
+
+
+class Jogo(Base):
+    """Um confronto do campeonato. Na eliminatória `proximo_id`/`proximo_lado` dizem para onde vai o vencedor."""
+
+    __tablename__ = "jogos"
+    __table_args__ = (Index("ix_jogos_campeonato", "campeonato_id", "rodada", "posicao"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    campeonato_id: Mapped[int] = mapped_column(ForeignKey("campeonatos.id", ondelete="CASCADE"))
+    rodada: Mapped[int] = mapped_column(Integer)  # 1 = primeira fase
+    posicao: Mapped[int] = mapped_column(Integer)  # ordem dentro da rodada
+    rodada_nome: Mapped[str] = mapped_column(String(40))  # "Quartas de final", "Final", "Rodada 2"
+    equipe_a_id: Mapped[int | None] = mapped_column(ForeignKey("equipes.id", ondelete="SET NULL"))
+    equipe_b_id: Mapped[int | None] = mapped_column(ForeignKey("equipes.id", ondelete="SET NULL"))
+    placar_a: Mapped[int] = mapped_column(Integer, default=0)
+    placar_b: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(10), default=J_AGENDADO)
+    vencedor_id: Mapped[int | None] = mapped_column(ForeignKey("equipes.id", ondelete="SET NULL"))
+    desempate: Mapped[bool] = mapped_column(Boolean, default=False)  # venceu no desempate (pênaltis, ponto de ouro…) com placar igual
+    folga: Mapped[bool] = mapped_column(Boolean, default=False)  # classificação direta (sem adversário)
+    proximo_id: Mapped[int | None] = mapped_column(ForeignKey("jogos.id", ondelete="SET NULL"))
+    proximo_lado: Mapped[str | None] = mapped_column(String(1))  # a | b
+    inicio_previsto: Mapped[datetime | None] = mapped_column(DateTime)
+    local: Mapped[str | None] = mapped_column(String(120))  # quadra/campo
+    iniciado_em: Mapped[datetime | None] = mapped_column(DateTime)
+    encerrado_em: Mapped[datetime | None] = mapped_column(DateTime)
+
+    equipe_a: Mapped[Equipe | None] = relationship(foreign_keys=[equipe_a_id], lazy="joined")
+    equipe_b: Mapped[Equipe | None] = relationship(foreign_keys=[equipe_b_id], lazy="joined")
+    eventos: Mapped[list["JogoEvento"]] = relationship(cascade="all, delete-orphan", order_by="JogoEvento.id")
+
+
+class JogoEvento(Base):
+    """Linha do tempo do jogo ao vivo: início, mudanças de placar, lances escritos e fim."""
+
+    __tablename__ = "jogo_eventos"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    jogo_id: Mapped[int] = mapped_column(ForeignKey("jogos.id", ondelete="CASCADE"), index=True)
+    tipo: Mapped[str] = mapped_column(String(10))  # inicio | placar | lance | fim | reaberto
+    texto: Mapped[str | None] = mapped_column(String(200))
+    equipe_id: Mapped[int | None] = mapped_column(ForeignKey("equipes.id", ondelete="SET NULL"))
+    placar_a: Mapped[int] = mapped_column(Integer, default=0)
+    placar_b: Mapped[int] = mapped_column(Integer, default=0)
+    autor_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id", ondelete="SET NULL"))
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=agora)
+
+
+class CampeonatoMesario(Base):
+    """Pessoa autorizada pela organização a conduzir jogos (iniciar, marcar placar, encerrar)."""
+
+    __tablename__ = "campeonato_mesarios"
+
+    campeonato_id: Mapped[int] = mapped_column(ForeignKey("campeonatos.id", ondelete="CASCADE"), primary_key=True)
+    usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), primary_key=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=agora)
+
     usuario: Mapped[Usuario] = relationship(lazy="joined")
 
 

@@ -468,6 +468,7 @@
           <div class="fato"><small>Início</small><b>${esc(k.data_inicio_texto)}</b></div><div class="fato"><small>Inscrições até</small><b>${esc(k.inscricao_ate_texto)}</b></div>
           <div class="fato"><small>Local</small><b>${esc(k.local_nome)}</b>${k.distancia ? `<div class="suave">a ${esc(k.distancia)}</div>` : ''}</div><div class="fato"><small>Inscrição</small><b>${esc(k.valor_inscricao_texto)}</b></div>
           <div class="fato"><small>Equipe</small><b>${k.atletas_por_equipe} atletas</b></div>${k.premiacao ? `<div class="fato"><small>Premiação</small><b>${esc(k.premiacao)}</b></div>` : ''}</div>
+        ${abasCamp(k, 'geral')}
         <b>${k.equipes}/${k.max_equipes} equipes • ${k.vagas} vaga${k.vagas !== 1 ? 's' : ''}</b>${barra(k.equipes, k.max_equipes)}
         ${k.inscricoes_abertas && ms.estado === 'fora' ? '<form id="f-eq" class="painel" style="margin-top:12px"><h3>Inscrever minha equipe</h3><div class="campo" style="margin-top:10px"><input name="nome" required maxlength="100" placeholder="Nome da equipe"></div><button class="btn roxo bloco">Inscrever equipe</button><p class="suave" style="margin-top:8px">Você será o capitão e convida os jogadores depois. O organizador confirma a inscrição.</p></form>' : ''}
         ${k.descricao ? `<div class="painel" style="margin-top:12px"><h3>Sobre</h3><p style="margin-top:6px">${esc(k.descricao)}</p></div>` : ''}
@@ -485,6 +486,31 @@
         if (k.mural_acesso) montarMural('mural', { escopo: 'campeonato', escopoId: k.id });
         const f = $('#f-eq');
         if (f) f.onsubmit = async (ev) => { ev.preventDefault(); try { await post(`/campeonatos/${k.id}/equipes`, { nome: dadosForm(ev.target).nome }); toast('Equipe inscrita!'); vCampeonato(k.id); } catch (e) { toast(e.message); } };
+      });
+    } catch (e) { erroTela(e); }
+  }
+
+  // Abas do campeonato: visão geral, chaves, ao vivo e (organização) sorteio
+  function abasCamp(k, ativa) {
+    const a = (id, href, nome) => `<a href="${href}" class="${ativa === id ? 'ativa' : ''}">${nome}</a>`;
+    return `<nav class="ch-abas">${a('geral', '#/campeonato/' + k.id, 'Visão geral')}${a('chaves', '#/campeonato/' + k.id + '/chaves', '🏆 Chaves')}${a('ao_vivo', '#/campeonato/' + k.id + '/ao-vivo', '🔴 Ao vivo')}${k.sou_gestor ? a('sorteio', '#/campeonato/' + k.id + '/sorteio', '🎲 Sorteio') : ''}</nav>`;
+  }
+
+  // Sub-páginas do campeonato (chaves, ao vivo, jogo e sorteio): a tela é o chaves.js, igual no site
+  async function vCampSub(id, modo, jogo) {
+    carregando();
+    try {
+      const k = await api('/campeonatos/' + id);
+      if (modo === 'sorteio' && !k.sou_gestor) { location.hash = '#/campeonato/' + id + '/chaves'; return; }
+      montar(`<a href="#/campeonato/${id}" class="suave">← ${esc(k.nome)}</a><h1 style="margin:8px 0 0">🏆 ${esc(k.nome)}</h1>${abasCamp(k, modo === 'jogo' ? 'ao_vivo' : modo)}
+        ${modo === 'jogo' ? `<p><a href="#/campeonato/${id}/chaves">← Voltar às chaves</a></p>` : ''}<div id="ch-conteudo"></div>`, () => {
+        const el = $('#ch-conteudo');
+        const get = (c) => api(c);
+        const href = (j) => '#/campeonato/' + id + '/jogo/' + j.id;
+        if (modo === 'chaves') Chaves.montarChaves(el, { get, href, id });
+        else if (modo === 'ao-vivo' || modo === 'ao_vivo') Chaves.montarAoVivo(el, { get, href, id });
+        else if (modo === 'jogo') Chaves.montarJogo(el, { get, post, id, jogo, toast });
+        else Chaves.montarSorteio(el, { get, post, apagar: (c) => api(c, { metodo: 'DELETE' }), id, toast, aoSortear: () => { location.hash = '#/campeonato/' + id + '/chaves'; } });
       });
     } catch (e) { erroTela(e); }
   }
@@ -1069,7 +1095,7 @@
     fecharFolha();
     const [caminho, parametros] = (location.hash || '#/').split('?');
     const partes = caminho.replace(/^#\/?/, '').split('/');
-    const [rota, arg, arg2] = partes;
+    const [rota, arg, arg2, arg3] = partes;
     if (rota === 'google' && arg) {  // volta do login com Google: o servidor entrega o token no fragmento
       estado.token = arg; estado.usuario = null; guardar('playgo_token', arg);
       location.replace(location.pathname + '#/'); return;  // troca a entrada do histórico: o token não fica no "voltar"
@@ -1098,7 +1124,7 @@
       case 'grupo': return vGrupo(arg, arg2);
       case 'novo-grupo': return vNovoGrupo();
       case 'campeonatos': return vCampeonatos();
-      case 'campeonato': return vCampeonato(arg);
+      case 'campeonato': return ['chaves', 'ao-vivo', 'sorteio', 'jogo'].includes(arg2) ? vCampSub(arg, arg2, arg3) : vCampeonato(arg);
       case 'novo-campeonato': return vNovoCampeonato();
       case 'arena': return vArena(arg);
       case 'gestao': return vGestao();
