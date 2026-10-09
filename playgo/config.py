@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     contato_privacidade: str = "privacidade@playgo.invalid"
     retencao_registros_dias: int = 365  # prazo de guarda dos registros de interação (confirmar com o jurídico)
     confiar_proxy: bool = False  # lê o IP de X-Forwarded-For (só atrás de proxy de confiança)
+    cookie_seguro: bool = False  # marca o cookie de sessão como Secure (ligue em produção com HTTPS)
 
     # Agendador: lembretes e reposição. A interface também dispara.
     agendador_na_web: bool = True

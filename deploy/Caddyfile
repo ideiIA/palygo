@@ -1,0 +1,17 @@
+{
+	email {$EMAIL_ACME}
+}
+
+{$DOMINIO} {
+	encode zstd gzip
+	# fotos, vídeos e PDF de até ~60 MB
+	request_body {
+		max_size 60MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+	reverse_proxy app:8010
+}

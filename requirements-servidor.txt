@@ -1,0 +1,3 @@
+# Dependências para rodar o PlayGo em servidor próprio (Docker/VPS): o runtime + o servidor ASGI.
+-r requirements.txt
+uvicorn[standard]>=0.30

@@ -1,0 +1,58 @@
+# PlayGo em produção própria: aplicativo + Postgres + HTTPS automático (Caddy).
+# Uso (na pasta deploy/):  docker compose --env-file .env up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: playgo
+      POSTGRES_USER: playgo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      TZ: America/Campo_Grande
+    volumes:
+      - dados_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U playgo -d playgo"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # o banco NÃO é publicado na internet: só o aplicativo o enxerga, pela rede interna
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      PLAYGO_DATABASE_URL: postgresql+psycopg://playgo:${POSTGRES_PASSWORD}@db:5432/playgo
+      PLAYGO_CONFIAR_PROXY: "true"
+      PLAYGO_COOKIE_SEGURO: "true"
+      PLAYGO_URL_PUBLICA: https://${DOMINIO:?defina DOMINIO no .env}
+    volumes:
+      - dados_uploads:/dados/uploads
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO}
+      EMAIL_ACME: ${EMAIL_ACME:?defina EMAIL_ACME no .env (aviso de certificado)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_dados:/data
+      - caddy_config:/config
+
+volumes:
+  dados_db:
+  dados_uploads:
+  caddy_dados:
+  caddy_config:

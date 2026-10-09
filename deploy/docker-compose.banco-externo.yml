@@ -1,0 +1,39 @@
+# PlayGo com o Postgres em OUTRO lugar (RDS, Neon, DigitalOcean Managed, outro servidor): só aplicativo + HTTPS.
+# Crie o banco e a URL com:  python deploy/criar_banco.py --admin-url "postgresql://admin:SENHA@HOST:5432/postgres"
+# Coloque a URL impressa em deploy/.env como PLAYGO_DATABASE_URL=... (acrescente ?sslmode=require se o provedor exigir TLS).
+# Uso:  docker compose -f docker-compose.banco-externo.yml --env-file .env up -d --build
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PLAYGO_DATABASE_URL: ${PLAYGO_DATABASE_URL:?defina PLAYGO_DATABASE_URL no .env}
+      PLAYGO_CONFIAR_PROXY: "true"
+      PLAYGO_COOKIE_SEGURO: "true"
+      PLAYGO_URL_PUBLICA: https://${DOMINIO:?defina DOMINIO no .env}
+    volumes:
+      - dados_uploads:/dados/uploads
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO}
+      EMAIL_ACME: ${EMAIL_ACME:?defina EMAIL_ACME no .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_dados:/data
+      - caddy_config:/config
+
+volumes:
+  dados_uploads:
+  caddy_dados:
+  caddy_config:

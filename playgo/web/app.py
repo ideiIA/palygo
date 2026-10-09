@@ -62,7 +62,9 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="PlayGo", lifespan=lifespan)
-app.add_middleware(SessionMiddleware, secret_key=seguranca.chave_sessao(), session_cookie="playgo_sessao", max_age=30 * 24 * 3600, same_site="lax")
+app.add_middleware(
+    SessionMiddleware, secret_key=seguranca.chave_sessao(), session_cookie="playgo_sessao", max_age=30 * 24 * 3600, same_site="lax", https_only=settings.cookie_seguro
+)
 app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
 app.mount("/app", StaticFiles(directory=PASTA.parent / "app", html=True), name="pwa")
 app.include_router(api_v1)
@@ -210,6 +212,15 @@ def sair(request: Request):
 
 
 # ---------------------------------------------------------------- início e explorar
+
+
+@app.get("/saude")
+def saude(s: Sessao):
+    """Verificação de saúde para o monitoramento do contêiner e do balanceador: responde se o banco está de pé."""
+    from sqlalchemy import text
+
+    s.execute(text("SELECT 1"))
+    return {"ok": True}
 
 
 @app.get("/")

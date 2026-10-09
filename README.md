@@ -110,3 +110,7 @@ O ícone (bola de futebol em movimento com as linhas de velocidade em lima, sobr
 ## Página de divulgação
 
 A raiz `/` mostra, para quem não está logado, a página de divulgação (`templates/landing.html`, `static/landing.css`): proposta de valor, funcionalidades, campeonatos, arenas, esportes, **planos com os preços reais da tabela `planos`** (`planos.vitrine`), confiança, perguntas frequentes e os caminhos **Criar conta**, **Entrar** e **Abrir o app** (`/app/`). Quem está logado continua indo direto ao início.
+
+## Publicar em servidor próprio (sem Supabase/Vercel)
+
+`docs/publicar-do-zero.md`: roteiro completo com Docker (aplicativo + Postgres + HTTPS), `deploy/gerar_credenciais.py` (credenciais novas), `deploy/criar_banco.py` (cria usuário e banco em qualquer Postgres), `deploy/backup.sh` e a alternativa com banco externo.
