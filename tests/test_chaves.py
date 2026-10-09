@@ -194,6 +194,118 @@ def test_nao_sorteia_de_novo_depois_que_um_jogo_comecou(s, fabrica):
         chaves.sortear(s, c.id, org, "eliminatoria")
 
 
+def _equipes_confirmadas(s, c):
+    from playgo.models import Equipe
+
+    return list(s.scalars(select(Equipe).where(Equipe.campeonato_id == c.id, Equipe.status == "confirmada").order_by(Equipe.id)))
+
+
+def test_cabecas_de_chave_na_eliminatoria_ficam_nas_melhores_posicoes_e_com_as_folgas(s, fabrica):
+    from playgo.models import ChaveEquipe
+
+    c, org, _ = _torneio(s, fabrica, 6)
+    eq = _equipes_confirmadas(s, c)
+    cabecas = [eq[4].id, eq[1].id]  # a equipe 5 é a cabeça nº 1 e a 2 é a nº 2
+    for _ in range(5):  # o sorteio das demais varia, as posições dos cabeças não
+        chaves.sortear(s, c.id, org, "eliminatoria", cabecas=cabecas)
+        r1 = [j for j in _jogos(s, c) if j.rodada == 1]
+        folgas = {j.vencedor_id for j in r1 if j.folga}
+        assert folgas == set(cabecas)  # 6 equipes numa chave de 8: as duas folgas são dos cabeças
+        semis = [j for j in _jogos(s, c) if j.rodada == 2]
+        assert semis[0].equipe_a_id == cabecas[0] and semis[1].equipe_a_id == cabecas[1]  # nº 1 e nº 2 só se cruzam na final
+    marcas = {k.equipe_id: k.cabeca for k in s.scalars(select(ChaveEquipe).where(ChaveEquipe.campeonato_id == c.id))}
+    assert marcas == {cabecas[0]: 1, cabecas[1]: 2}
+    d = chaves.chaveamento(s, c, org)
+    assert [x["ordem"] for x in d["cabecas"]] == [1, 2] and d["cabecas"][0]["equipe"]["id"] == cabecas[0]
+    with pytest.raises(ErroNegocio, match="cabeças de chave"):
+        chaves.sortear(s, c.id, org, "eliminatoria", cabecas=[cabecas[0], cabecas[0]])  # repetido
+    with pytest.raises(ErroNegocio, match="cabeças de chave"):
+        chaves.sortear(s, c.id, org, "eliminatoria", cabecas=[999999])  # não é equipe do campeonato
+
+
+def test_fase_de_grupos_cabecas_em_grupos_diferentes_e_mata_mata_automatico(s, fabrica):
+    from playgo.models import ChaveEquipe
+
+    c, org, _ = _torneio(s, fabrica, 9)
+    eq = _equipes_confirmadas(s, c)
+    cabecas = [eq[0].id, eq[3].id, eq[6].id]
+    with pytest.raises(ErroNegocio, match="grupos"):
+        chaves.sortear(s, c.id, org, "grupos", grupos=1)
+    with pytest.raises(ErroNegocio, match="cabeças de chave do que grupos"):
+        chaves.sortear(s, c.id, org, "grupos", grupos=2, cabecas=cabecas)
+    with pytest.raises(ErroNegocio, match="Classificam"):
+        chaves.sortear(s, c.id, org, "grupos", grupos=3, classificam=4)
+    chaves.sortear(s, c.id, org, "grupos", grupos=3, classificam=2, cabecas=cabecas)
+    marcas = list(s.scalars(select(ChaveEquipe).where(ChaveEquipe.campeonato_id == c.id)))
+    por_grupo = {}
+    for m in marcas:
+        por_grupo.setdefault(m.grupo, []).append(m)
+    assert sorted(por_grupo) == ["A", "B", "C"] and all(len(v) == 3 for v in por_grupo.values())  # 9 equipes em 3 grupos de 3
+    assert [next(m.grupo for m in marcas if m.equipe_id == i) for i in cabecas] == ["A", "B", "C"]  # um cabeça por grupo, na ordem
+    jogos = _jogos(s, c)
+    assert len(jogos) == 9 and all(j.fase == "grupos" and j.grupo for j in jogos)  # 3 grupos × 3 jogos
+
+    # joga os grupos dando a vitória ao lado A; o mata-mata aparece sozinho no último jogo
+    pendentes = [j for j in jogos]
+    for j in pendentes[:-1]:
+        _disputar(s, c, org, j, 2, 0)
+    assert not [x for x in _jogos(s, c) if x.fase == "mata_mata"]
+    d = chaves.chaveamento(s, c, org)
+    assert d["formato"] == "grupos" and len(d["grupos"]) == 3 and d["rodadas"] == [] and d["jogos_grupos_restantes"] == 1
+    _disputar(s, c, org, pendentes[-1], 2, 0)
+    mata = [x for x in _jogos(s, c) if x.fase == "mata_mata"]
+    assert mata, "o mata-mata deve nascer quando o último jogo de grupo termina"
+    classificados = {e for x in mata if x.rodada == 1 for e in (x.equipe_a_id, x.equipe_b_id) if e}
+    assert len(classificados) == 6  # 3 grupos × 2 classificados
+    d = chaves.chaveamento(s, c, org)
+    assert d["classificam"] == 2 and d["jogos_grupos_restantes"] == 0 and len(d["rodadas"]) == 3
+    for g in d["grupos"]:
+        assert [L["classifica"] for L in g["classificacao"]] == [True, True, False]
+    # primeira rodada do mata-mata: ninguém enfrenta quem era do próprio grupo
+    grupo_de = {m.equipe_id: m.grupo for m in s.scalars(select(ChaveEquipe).where(ChaveEquipe.campeonato_id == c.id))}
+    for x in mata:
+        if x.rodada == 1 and x.equipe_a_id and x.equipe_b_id:
+            assert grupo_de[x.equipe_a_id] != grupo_de[x.equipe_b_id]
+    # empate no jogo do mata-mata pede desempate; no grupo, não
+    jm = next(x for x in _jogos(s, c) if x.fase == "mata_mata" and x.equipe_a_id and x.equipe_b_id and x.status == "agendado")
+    chaves.iniciar(s, c.id, jm.id, org)
+    with pytest.raises(ErroNegocio, match="desempate"):
+        chaves.encerrar(s, c.id, jm.id, org)
+    chaves.encerrar(s, c.id, jm.id, org, vencedor_id=jm.equipe_a_id)
+    # terminar todo o mata-mata fecha o campeonato com campeão
+    for rodada in (1, 2, 3):
+        for x in [y for y in _jogos(s, c) if y.fase == "mata_mata" and y.rodada == rodada and y.status == "agendado"]:
+            _disputar(s, c, org, x, 3, 1)
+    s.refresh(c)
+    final = max((x for x in _jogos(s, c) if x.fase == "mata_mata"), key=lambda x: x.rodada)
+    assert c.status == "encerrado" and chaves.chaveamento(s, c, org)["campeao"]["id"] == final.vencedor_id
+
+
+def test_grupos_reabrir_apaga_o_mata_mata_se_ainda_nao_comecou(s, fabrica):
+    c, org, _ = _torneio(s, fabrica, 4)
+    chaves.sortear(s, c.id, org, "grupos", grupos=2, classificam=1)
+    jogos = _jogos(s, c)
+    assert len(jogos) == 2
+    for j in jogos:
+        _disputar(s, c, org, j, 1, 0)
+    assert [x for x in _jogos(s, c) if x.fase == "mata_mata"]
+    chaves.reabrir(s, c.id, jogos[0].id, org)  # mata-mata ainda não começou: é desfeito
+    assert not [x for x in _jogos(s, c) if x.fase == "mata_mata"]
+    chaves.encerrar(s, c.id, jogos[0].id, org)
+    final = [x for x in _jogos(s, c) if x.fase == "mata_mata"][0]
+    chaves.iniciar(s, c.id, final.id, org)
+    with pytest.raises(ErroNegocio, match="mata-mata já começou"):
+        chaves.reabrir(s, c.id, jogos[0].id, org)
+
+
+def test_sortear_de_novo_funciona_mesmo_com_folgas(s, fabrica):
+    c, org, _ = _torneio(s, fabrica, 6)
+    chaves.sortear(s, c.id, org, "eliminatoria")  # tem 2 folgas, que já nascem encerradas
+    assert chaves.chaveamento(s, c, org)["pode_sortear_de_novo"] is True
+    chaves.sortear(s, c.id, org, "eliminatoria")  # não pode travar por causa das folgas
+    chaves.sortear(s, c.id, org, "grupos", grupos=2, classificam=2)
+
+
 def test_api_todos_acompanham_e_so_a_organizacao_conduz(banco):
     """Só pela API/site (sem a sessão de teste aberta): o startup do app altera tabelas e travaria com ela."""
     from playgo.web.app import app

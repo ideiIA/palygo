@@ -415,6 +415,8 @@ class Campeonato(Base):
     formato: Mapped[str | None] = mapped_column(String(20))
     sorteado_em: Mapped[datetime | None] = mapped_column(DateTime)
     sorteio_semente: Mapped[int | None] = mapped_column(BigInteger)
+    grupos_qtd: Mapped[int | None] = mapped_column(Integer)  # formato "grupos": quantos grupos
+    classificam: Mapped[int | None] = mapped_column(Integer)  # formato "grupos": quantas equipes de cada grupo vão ao mata-mata
 
     modalidade: Mapped[Modalidade] = relationship(lazy="joined")
     organizador: Mapped[Usuario] = relationship(lazy="joined")
@@ -465,7 +467,9 @@ class Jogo(Base):
     campeonato_id: Mapped[int] = mapped_column(ForeignKey("campeonatos.id", ondelete="CASCADE"))
     rodada: Mapped[int] = mapped_column(Integer)  # 1 = primeira fase
     posicao: Mapped[int] = mapped_column(Integer)  # ordem dentro da rodada
-    rodada_nome: Mapped[str] = mapped_column(String(40))  # "Quartas de final", "Final", "Rodada 2"
+    rodada_nome: Mapped[str] = mapped_column(String(40))  # "Quartas de final", "Final", "Rodada 2", "Grupo A · Rodada 1"
+    fase: Mapped[str | None] = mapped_column(String(10))  # só no formato "grupos": "grupos" | "mata_mata"
+    grupo: Mapped[str | None] = mapped_column(String(2))  # letra do grupo (jogos da fase de grupos)
     equipe_a_id: Mapped[int | None] = mapped_column(ForeignKey("equipes.id", ondelete="SET NULL"))
     equipe_b_id: Mapped[int | None] = mapped_column(ForeignKey("equipes.id", ondelete="SET NULL"))
     placar_a: Mapped[int] = mapped_column(Integer, default=0)
@@ -500,6 +504,17 @@ class JogoEvento(Base):
     placar_b: Mapped[int] = mapped_column(Integer, default=0)
     autor_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id", ondelete="SET NULL"))
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=agora)
+
+
+class ChaveEquipe(Base):
+    """Posição de uma equipe no sorteio: o grupo em que caiu e/ou o número de cabeça de chave (1 = o mais forte)."""
+
+    __tablename__ = "chave_equipes"
+
+    campeonato_id: Mapped[int] = mapped_column(ForeignKey("campeonatos.id", ondelete="CASCADE"), index=True)
+    equipe_id: Mapped[int] = mapped_column(ForeignKey("equipes.id", ondelete="CASCADE"), primary_key=True)
+    grupo: Mapped[str | None] = mapped_column(String(2))
+    cabeca: Mapped[int | None] = mapped_column(Integer)
 
 
 class CampeonatoMesario(Base):

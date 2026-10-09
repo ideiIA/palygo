@@ -14,6 +14,9 @@ router = APIRouter(prefix="/api/v1/campeonatos")
 
 class SorteioIn(BaseModel):
     formato: str
+    grupos: int | None = None  # fase de grupos: quantos grupos
+    classificam: int | None = None  # fase de grupos: quantos de cada grupo vão ao mata-mata
+    cabecas: list[int] = []  # ids das equipes cabeças de chave, em ordem (a 1ª é a nº 1)
 
 
 class MarcarIn(BaseModel):
@@ -51,7 +54,7 @@ def ver_chaves(campeonato_id: int, u: AtualApi, s: Sessao):
 
 @router.post("/{campeonato_id}/sorteio")
 def sortear(campeonato_id: int, corpo: SorteioIn, u: AtualApi, s: Sessao):
-    chaves.sortear(s, campeonato_id, u, corpo.formato)
+    chaves.sortear(s, campeonato_id, u, corpo.formato, corpo.grupos, corpo.classificam, corpo.cabecas)
     return chaves.chaveamento(s, campeonatos.obter(s, campeonato_id), u)
 
 

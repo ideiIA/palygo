@@ -34,12 +34,35 @@
       '</tbody></table></div><p class="ch-sub">Vitória 3 pontos, empate 1. Desempate: saldo e depois gols/pontos pró.</p>';
   }
 
+  function tabelaGrupo(g, classificam) {
+    return '<div class="ch-tabela-wrap"><table class="ch-tabela"><thead><tr><th>#</th><th>Equipe</th><th>P</th><th>J</th><th>SG</th></tr></thead><tbody>' +
+      g.map((l) => '<tr class="' + (l.classifica ? 'ch-classif' : '') + '"><td>' + l.posicao + '</td><td class="ch-eq">' + esc(l.equipe.nome) + (l.cabeca ? ' <span class="ch-cabeca" title="Cabeça de chave">C' + l.cabeca + '</span>' : '') + '</td><td><b>' + l.pontos + '</b></td><td>' + l.jogos + '</td><td>' + (l.saldo > 0 ? '+' : '') + l.saldo + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  }
+
+  function htmlGrupos(d, href) {
+    let h = '<h3 class="ch-tit">Fase de grupos</h3><p class="ch-sub">Classificam-se os ' + d.classificam + ' primeiros de cada grupo (linhas destacadas). Desempate: saldo, depois pontos/gols pró.</p><div class="ch-grupos">';
+    h += d.grupos.map((g) => '<div class="ch-grupo"><h4>Grupo ' + esc(g.grupo) + '</h4>' + tabelaGrupo(g.classificacao) +
+      g.rodadas.map((r) => '<div class="ch-sub" style="margin:8px 0 4px">' + esc(r.nome) + '</div><div class="ch-grade pequeno">' + r.jogos.map((j) => cartao(j, href)).join('') + '</div>').join('') + '</div>').join('');
+    h += '</div>';
+    if (d.rodadas.length) h += '<h3 class="ch-tit">Mata-mata</h3><div class="ch-chave">' + d.rodadas.map((r) => '<div class="ch-coluna"><h4>' + esc(r.nome) + '</h4><div class="ch-col-jogos">' + r.jogos.map((j) => cartao(j, href)).join('') + '</div></div>').join('') + '</div>';
+    else h += '<div class="ch-aviso" style="margin-top:14px">O mata-mata é montado automaticamente quando terminar o último jogo da fase de grupos' + (d.jogos_grupos_restantes ? ' (faltam ' + d.jogos_grupos_restantes + ' jogo' + (d.jogos_grupos_restantes !== 1 ? 's' : '') + ').' : '.') + '</div>';
+    return h;
+  }
+
+  function todosJogos(d) {
+    return (d.grupos || []).flatMap((g) => g.rodadas.flatMap((r) => r.jogos)).concat(d.rodadas.flatMap((r) => r.jogos));
+  }
+
   function htmlChaves(d, href) {
-    if (!d.rodadas.length) return '<div class="ch-vazio">O chaveamento ainda não foi sorteado.' + (d.pode_gerir ? '' : ' Assim que a organização sortear, ele aparece aqui.') + '</div>';
+    if (!d.rodadas.length && !(d.grupos || []).length) return '<div class="ch-vazio">O chaveamento ainda não foi sorteado.' + (d.pode_gerir ? '' : ' Assim que a organização sortear, ele aparece aqui.') + '</div>';
     let h = '';
     if (d.campeao) h += '<div class="ch-campeao">🏆 Campeão: <b>' + esc(d.campeao.nome) + '</b></div>';
     if (d.ao_vivo.length) h += '<div class="ch-aovivo"><b>🔴 Agora</b>' + d.ao_vivo.map((j) => cartao(j, href)).join('') + '</div>';
-    if (d.formato === 'eliminatoria') {
+    if (d.cabecas && d.cabecas.length) h += '<p class="ch-sub">Cabeças de chave: ' + d.cabecas.map((c) => c.ordem + 'º ' + esc(c.equipe ? c.equipe.nome : '')).join(' · ') + '</p>';
+    if (d.formato === 'grupos') {
+      h += htmlGrupos(d, href);
+    } else if (d.formato === 'eliminatoria') {
       h += '<div class="ch-chave">' + d.rodadas.map((r) => '<div class="ch-coluna"><h4>' + esc(r.nome) + '</h4><div class="ch-col-jogos">' + r.jogos.map((j) => cartao(j, href)).join('') + '</div></div>').join('') + '</div>';
     } else {
       h += '<h3 class="ch-tit">Classificação</h3>' + tabela(d.classificacao);
@@ -80,7 +103,7 @@
         const s = JSON.stringify(d);
         if (s === ultimo) return;
         ultimo = s;
-        const todos = d.rodadas.flatMap((r) => r.jogos);
+        const todos = todosJogos(d);
         const prox = todos.filter((j) => j.status === 'agendado' && j.a && j.b).sort((x, y) => (x.inicio_previsto || '9').localeCompare(y.inicio_previsto || '9'));
         const fim = todos.filter((j) => j.status === 'encerrado' && !j.folga).reverse().slice(0, 8);
         const bloco = (t, js, vazio) => '<h3 class="ch-tit">' + t + '</h3>' + (js.length ? '<div class="ch-grade">' + js.map((j) => cartao(j, href)).join('') + '</div>' : '<p class="ch-sub">' + vazio + '</p>');
@@ -168,28 +191,46 @@
 
   // ---------------------------------------------------------------- sorteio e mesários
 
+  const opcoes = (de, ate, padrao) => Array.from({ length: ate - de + 1 }, (_, i) => de + i).map((n) => '<option value="' + n + '"' + (n === padrao ? ' selected' : '') + '>' + n + '</option>').join('');
+
   function montarSorteio(el, o) {
     const { get, post, id, toast } = o;
     const enviar = (m, c, corpo) => (m === 'DELETE' ? o.apagar(c) : post(c, corpo));
     async function desenhar(d) {
-      const jaTem = d.rodadas.length > 0;
+      const jaTem = d.rodadas.length > 0 || (d.grupos || []).length > 0;
       el.innerHTML =
         '<div class="ch-painel"><h3>🎲 Sorteio do chaveamento</h3>' +
         '<p class="ch-sub">' + d.equipes_confirmadas + ' equipe' + (d.equipes_confirmadas !== 1 ? 's' : '') + ' confirmada' + (d.equipes_confirmadas !== 1 ? 's' : '') + (d.equipes_pendentes ? ' · ' + d.equipes_pendentes + ' ainda pendente' + (d.equipes_pendentes !== 1 ? 's' : '') + ' (confirme antes de sortear)' : '') + '.</p>' +
         (jaTem ? '<p class="ch-aviso">Sorteado em ' + dataHora(d.sorteado_em) + ' · formato: ' + esc(d.formato_nome || '') + ' · semente ' + d.semente + (d.pode_sortear_de_novo ? '. Você pode sortear de novo enquanto nenhum jogo começou.' : '. Já há jogos começados: o sorteio está travado.') + '</p>' : '') +
         (!jaTem || d.pode_sortear_de_novo ? '<div class="ch-campo"><label><input type="radio" name="formato" value="eliminatoria" checked> <b>Eliminatória (mata-mata)</b> — quem perde sai; equipes sem adversário passam direto.</label>' +
+          '<label><input type="radio" name="formato" value="grupos"> <b>Fase de grupos + mata-mata</b> — grupos todos contra todos; os melhores de cada grupo seguem para o mata-mata.</label>' +
           '<label><input type="radio" name="formato" value="pontos_corridos"> <b>Pontos corridos</b> — todos jogam contra todos; vale a classificação.</label></div>' +
+          '<div class="ch-campo" id="op-grupos" hidden><div style="display:flex;gap:10px;flex-wrap:wrap"><label>Grupos <select id="n-grupos">' + opcoes(2, Math.max(2, Math.floor(d.equipes_confirmadas / 2)), 2) + '</select></label>' +
+          '<label>Classificam por grupo <select id="n-classif">' + opcoes(1, 4, 2) + '</select></label></div><p class="ch-sub">Cada grupo precisa de pelo menos 2 equipes e recebe no máximo um cabeça de chave.</p></div>' +
+          '<div class="ch-campo" id="op-cabecas"><b>Cabeças de chave</b><p class="ch-sub" style="margin:0">Opcional. Numere as equipes mais fortes (1 = principal); elas ficam nas melhores posições e, nos grupos, em grupos diferentes. As demais são sorteadas.</p>' +
+          '<div class="ch-cabecas">' + d.equipes.map((e) => '<label class="ch-cab"><input type="number" min="1" max="' + d.equipes.length + '" data-cabeca="' + e.id + '" placeholder="–"> ' + esc(e.nome) + '</label>').join('') + '</div></div>' +
           '<button class="ch-btn grande" id="bt-sortear" ' + (d.equipes_confirmadas < 2 ? 'disabled' : '') + '>' + (jaTem ? '🔁 Sortear de novo' : '🎲 Sortear agora') + '</button>' : '') +
-        '<p class="ch-sub">O sorteio é aleatório, fica registrado e as equipes são avisadas.</p></div>' +
+        '<p class="ch-sub">O sorteio é aleatório (fora os cabeças de chave), fica registrado e as equipes são avisadas.</p></div>' +
         '<div class="ch-painel"><h3>📋 Mesários</h3><p class="ch-sub">Pessoas autorizadas a iniciar jogos, marcar o placar e encerrar. Todos os demais só acompanham.</p>' +
         '<div id="mesarios">' + (d.mesarios.length ? d.mesarios.map((m) => '<span class="ch-chip">' + esc(m.arroba) + ' <button data-rm="' + m.usuario_id + '" title="Remover">×</button></span>').join('') : '<span class="ch-sub">Nenhum mesário além de você.</span>') + '</div>' +
         '<div class="ch-campo" style="display:flex;gap:6px"><input id="bt-mes" list="dl-mes" placeholder="@usuario" autocomplete="off"><datalist id="dl-mes"></datalist><button class="ch-btn suave" id="bt-add">Adicionar</button></div></div>';
       const bt = el.querySelector('#bt-sortear');
+      const mostrarOpcoes = () => {
+        const f = el.querySelector('[name=formato]:checked');
+        if (!f) return;
+        el.querySelector('#op-grupos').hidden = f.value !== 'grupos';
+        el.querySelector('#op-cabecas').hidden = f.value === 'pontos_corridos';
+      };
+      el.querySelectorAll('[name=formato]').forEach((r) => (r.onchange = mostrarOpcoes));
+      mostrarOpcoes();
       if (bt) bt.onclick = async () => {
         if (jaTem && !confirm('Sortear de novo? O chaveamento atual será substituído.')) return;
+        const marcados = [...el.querySelectorAll('[data-cabeca]')].filter((i) => i.value).map((i) => ({ id: Number(i.dataset.cabeca), n: Number(i.value) })).sort((a, b) => a.n - b.n);
+        if (new Set(marcados.map((m) => m.n)).size !== marcados.length) { if (toast) toast('Cada cabeça de chave precisa de um número diferente.'); return; }
         bt.disabled = true;
         try {
-          await post('/campeonatos/' + id + '/sorteio', { formato: el.querySelector('[name=formato]:checked').value });
+          const formato = el.querySelector('[name=formato]:checked').value;
+          await post('/campeonatos/' + id + '/sorteio', { formato, grupos: formato === 'grupos' ? Number(el.querySelector('#n-grupos').value) : null, classificam: formato === 'grupos' ? Number(el.querySelector('#n-classif').value) : null, cabecas: formato === 'pontos_corridos' ? [] : marcados.map((m) => m.id) });
           if (toast) toast('Sorteio feito!');
           if (o.aoSortear) o.aoSortear(); else desenhar(await get('/campeonatos/' + id + '/chaves'));
         } catch (e) { if (toast) toast(e.message); bt.disabled = false; }

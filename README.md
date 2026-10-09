@@ -52,7 +52,7 @@ Tudo é um serviço Python puro em `playgo/`; o site (`web/app.py`) e a API (`ap
   ocioso** (vira oportunidade pública e avisa atletas próximos) e painel (reservas, ocupação, ociosos, atletas alcançados,
   recorrência, modalidades e dias de maior demanda). Atleta só usa uma quadra no horário que a arena divulgou; o gestor, em qualquer um.
 - **Campeonatos** (`campeonatos.py`): cadastro, inscrição pelo capitão, convites aos jogadores, confirmação pelo organizador.
-  **Chaves** (`chaves.py`): dentro de cada campeonato há sub-páginas **Chaves** (acompanhamento de todos os jogos), **Ao vivo** (jogo com placar e lance a lance, que qualquer pessoa logada acompanha) e **Sorteio** (só a organização: sorteio aleatório do chaveamento e indicação de mesários que conduzem os jogos).
+  **Chaves** (`chaves.py`): dentro de cada campeonato há sub-páginas **Chaves** (acompanhamento de todos os jogos), **Ao vivo** (jogo com placar e lance a lance, que qualquer pessoa logada acompanha) e **Sorteio** (só a organização: sorteio aleatório do chaveamento em três formatos — eliminatória, pontos corridos ou **fase de grupos + mata-mata** —, com **cabeças de chave** definidos por ela, e indicação de mesários que conduzem os jogos). No formato de grupos o mata-mata é montado sozinho quando termina a fase de grupos.
 - **Grupos** (`grupos.py`): administradores, agenda, histórico, avisos fixados e chat (o app atualiza por polling a cada 5 s).
 - **Notificações** (`notificacoes.py`, `agendador.py`): caixa de entrada no banco; lembrete "seu jogo começa em 2 horas" e reforço
   de "falta gente" na última hora pelo agendador. Push no aparelho não existe ainda — o app mostra o contador no sino.

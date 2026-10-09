@@ -67,3 +67,24 @@
 .ch-aviso { background: #fff7e0; border: 1px solid #f4dc9a; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
 .ch-chip { display: inline-flex; gap: 6px; align-items: center; background: #f0edff; color: var(--purple, #6c4cff); border-radius: 999px; padding: 4px 10px; font-weight: 800; font-size: 13px; margin: 0 6px 6px 0; }
 .ch-chip button { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 16px; line-height: 1; }
+
+/* fase de grupos e cabeças de chave */
+.ch-grupos { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-bottom: 8px; }
+.ch-grupo { background: #fff; border: 1px solid var(--border, #e9eaf0); border-radius: 14px; padding: 12px; }
+.ch-grupo h4 { margin: 0 0 8px; font-size: 15px; }
+.ch-grupo .ch-tabela { font-size: 13px; }
+.ch-grupo .ch-tabela th, .ch-grupo .ch-tabela td { padding: 6px 7px; }
+.ch-classif td { background: #f1fbe8; }
+.ch-classif td.ch-eq { border-left: 3px solid #5fbf1f; }
+.ch-grade.pequeno { grid-template-columns: 1fr; }
+.ch-cabeca { display: inline-block; background: #fff0df; color: #d96a00; border-radius: 6px; padding: 0 5px; font-size: 11px; font-weight: 900; margin-left: 4px; }
+.ch-cabecas { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.ch-cab { display: flex; gap: 8px; align-items: center; font-weight: 600; border: 1px solid var(--border, #e9eaf0); border-radius: 10px; padding: 6px 8px; }
+.ch-cab input { width: 52px; border: 1px solid var(--border, #e9eaf0); border-radius: 8px; padding: 6px; font: inherit; }
+#op-grupos label { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+#op-grupos select { border: 1px solid var(--border, #e9eaf0); border-radius: 8px; padding: 6px; font: inherit; }
+[hidden] { display: none !important; }
+.ch-campo input[type=radio], .ch-campo input[type=checkbox] { width: auto; min-width: 0; flex: none; margin-top: 3px; padding: 0; }
+.ch-cab input { width: 52px !important; min-width: 0 !important; flex: none; }
+.ch-cab { justify-content: flex-start; }
+.ch-cabecas label.ch-cab { display: flex; flex-direction: row-reverse; justify-content: flex-end; }
