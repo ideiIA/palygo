@@ -154,3 +154,11 @@
 .el-btn { border: 0; border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 800; cursor: pointer; background: var(--purple, #6c4cff); color: #fff; }
 .el-btn.suave { background: #f0edff; color: var(--purple, #6c4cff); }
 .el-aviso { font-size: 13px; color: var(--muted, #667085); margin: 6px 0; }
+
+/* vencedor do jogo encerrado em destaque (verde) */
+.ch-linha.venceu { background: #e3f7e9; color: #0a6b34; border-radius: 8px; padding: 4px 8px; margin: 1px -4px; }
+.ch-linha.venceu .ch-nome { font-weight: 900; }
+.ch-linha.venceu .ch-nome::before { content: "✓ "; color: #16a34a; }
+.ch-linha.venceu .ch-pl { color: #0a6b34; }
+.ch-jogo.encerrado { border-color: #cdebd8; }
+.jv-eq.venceu span { color: #b7f34b; }
