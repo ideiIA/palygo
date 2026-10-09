@@ -417,6 +417,7 @@ class Campeonato(Base):
     sorteio_semente: Mapped[int | None] = mapped_column(BigInteger)
     grupos_qtd: Mapped[int | None] = mapped_column(Integer)  # formato "grupos": quantos grupos
     classificam: Mapped[int | None] = mapped_column(Integer)  # formato "grupos": quantas equipes de cada grupo vão ao mata-mata
+    duracao_jogo_min: Mapped[int | None] = mapped_column(Integer)  # última duração usada na agenda em lote (preenche o formulário)
 
     modalidade: Mapped[Modalidade] = relationship(lazy="joined")
     organizador: Mapped[Usuario] = relationship(lazy="joined")

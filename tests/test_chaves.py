@@ -306,6 +306,70 @@ def test_sortear_de_novo_funciona_mesmo_com_folgas(s, fabrica):
     chaves.sortear(s, c.id, org, "grupos", grupos=2, classificam=2)
 
 
+def test_agenda_em_lote_marca_um_jogo_depois_do_outro_por_rodada(s, fabrica):
+    from datetime import datetime, time
+
+    c, org, donos = _torneio(s, fabrica, 4)
+    chaves.sortear(s, c.id, org, "eliminatoria")
+    h = lambda j: j.inicio_previsto.strftime("%d %H:%M") if j.inicio_previsto else None  # noqa: E731
+    inicio = datetime(2026, 11, 7, 9, 0)
+
+    r = chaves.agendar_lote(s, c.id, org, "todos", inicio, 40, 10)
+    semis = [j for j in _jogos(s, c) if j.rodada == 1]
+    final = [j for j in _jogos(s, c) if j.rodada == 2][0]
+    assert r["agendados"] == 3 and [h(j) for j in semis] == ["07 09:00", "07 09:50"] and h(final) == "07 10:40"  # cada rodada em horário novo
+    assert r["primeiro"] == "2026-11-07T09:00:00" and r["ultimo_fim"] == "2026-11-07T11:20:00"
+    s.refresh(c)
+    assert c.duracao_jogo_min == 40 and chaves.chaveamento(s, c, org)["duracao_jogo_min"] == 40
+    # a capitã de uma equipe é avisada
+    assert s.query(Notificacao).filter(Notificacao.usuario_id.in_([d.id for d in donos]), Notificacao.titulo.like("%Horários%")).count() >= 1
+
+    # duas quadras: os jogos da mesma rodada acontecem juntos, uma quadra cada
+    chaves.agendar_lote(s, c.id, org, "todos", inicio, 40, 10, locais=["Quadra 01", "Quadra 02"])
+    semis = [j for j in _jogos(s, c) if j.rodada == 1]
+    assert [(h(j), j.local) for j in semis] == [("07 09:00", "Quadra 01"), ("07 09:00", "Quadra 02")]
+    assert h([j for j in _jogos(s, c) if j.rodada == 2][0]) == "07 09:50"
+
+    # horário-limite: o que não cabe no dia segue no dia seguinte, na hora do início
+    chaves.agendar_lote(s, c.id, org, "todos", inicio, 40, 10, ate=time(10, 0))
+    assert [h(j) for j in _jogos(s, c)] == ["07 09:00", "08 09:00", "09 09:00"]
+    with pytest.raises(ErroNegocio, match="horário-limite"):
+        chaves.agendar_lote(s, c.id, org, "todos", inicio, 40, 10, ate=time(9, 30))
+
+    # uma rodada só; sem sobrescrever, quem já tem horário fica como está
+    chaves.agendar_lote(s, c.id, org, "rodada:2", datetime(2026, 11, 14, 15, 0), 30)
+    assert h([j for j in _jogos(s, c) if j.rodada == 2][0]) == "14 15:00" and h(_jogos(s, c)[0]) == "07 09:00"
+    with pytest.raises(ErroNegocio, match="Não há jogos"):
+        chaves.agendar_lote(s, c.id, org, "todos", inicio, 40, 10, sobrescrever=False)
+
+    # regras: duração, escopo e permissão; jogo que já começou não é remarcado
+    for args in (dict(duracao_min=2), dict(duracao_min=40, intervalo_min=-1), dict(duracao_min=40, escopo="xyz"), dict(duracao_min=40, escopo="rodada:abc")):
+        with pytest.raises(ErroNegocio):
+            chaves.agendar_lote(s, c.id, org, args.pop("escopo", "todos"), inicio, **args)
+    with pytest.raises(SemPermissao):
+        chaves.agendar_lote(s, c.id, donos[0], "todos", inicio, 40)
+    primeiro = _jogos(s, c)[0]
+    chaves.iniciar(s, c.id, primeiro.id, org)
+    chaves.agendar_lote(s, c.id, org, "todos", datetime(2026, 12, 1, 8, 0), 40)
+    assert h(primeiro) == "07 09:00"  # o jogo ao vivo não foi tocado
+
+
+def test_agenda_em_lote_dos_grupos_e_depois_do_mata_mata(s, fabrica):
+    from datetime import datetime
+
+    c, org, _ = _torneio(s, fabrica, 4)
+    chaves.sortear(s, c.id, org, "grupos", grupos=2, classificam=1)
+    with pytest.raises(ErroNegocio, match="Não há jogos"):
+        chaves.agendar_lote(s, c.id, org, "mata_mata", datetime(2026, 11, 7, 9, 0), 40)  # o mata-mata ainda não existe
+    chaves.agendar_lote(s, c.id, org, "grupos", datetime(2026, 11, 7, 9, 0), 30, 0, locais=["Q1", "Q2"])
+    jogos = _jogos(s, c)
+    assert len(jogos) == 2 and {j.local for j in jogos} == {"Q1", "Q2"} and len({j.inicio_previsto for j in jogos}) == 1  # 2 grupos, 1 jogo cada, juntos
+    for j in jogos:
+        _disputar(s, c, org, j, 1, 0)
+    r = chaves.agendar_lote(s, c.id, org, "mata_mata", datetime(2026, 11, 7, 11, 0), 40)
+    assert r["agendados"] == 1
+
+
 def test_api_todos_acompanham_e_so_a_organizacao_conduz(banco):
     """Só pela API/site (sem a sessão de teste aberta): o startup do app altera tabelas e travaria com ela."""
     from playgo.web.app import app

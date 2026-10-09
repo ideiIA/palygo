@@ -1,7 +1,7 @@
 """API do chaveamento: sorteio, chaves, jogo ao vivo e mesários de cada campeonato.
 Quem acompanha só lê (GET); sorteio, mesários e condução dos jogos ficam nos serviços de `chaves.py`."""
 
-from datetime import datetime
+from datetime import datetime, time
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -43,6 +43,16 @@ class AgendarIn(BaseModel):
     local: str | None = None
 
 
+class AgendaLoteIn(BaseModel):
+    escopo: str = "todos"  # todos | grupos | mata_mata | rodada:N
+    inicio: datetime
+    duracao_min: int
+    intervalo_min: int = 0
+    locais: list[str] = []  # quadras/campos; vários = jogos da mesma rodada ao mesmo tempo
+    ate: time | None = None  # horário-limite do dia; o resto segue no dia seguinte
+    sobrescrever: bool = True
+
+
 class MesarioIn(BaseModel):
     usuario_id: int
 
@@ -56,6 +66,11 @@ def ver_chaves(campeonato_id: int, u: AtualApi, s: Sessao):
 def sortear(campeonato_id: int, corpo: SorteioIn, u: AtualApi, s: Sessao):
     chaves.sortear(s, campeonato_id, u, corpo.formato, corpo.grupos, corpo.classificam, corpo.cabecas)
     return chaves.chaveamento(s, campeonatos.obter(s, campeonato_id), u)
+
+
+@router.post("/{campeonato_id}/agenda")
+def agenda_em_lote(campeonato_id: int, corpo: AgendaLoteIn, u: AtualApi, s: Sessao):
+    return chaves.agendar_lote(s, campeonato_id, u, corpo.escopo, corpo.inicio, corpo.duracao_min, corpo.intervalo_min, corpo.locais, corpo.ate, corpo.sobrescrever)
 
 
 @router.get("/{campeonato_id}/jogos/{jogo_id}")

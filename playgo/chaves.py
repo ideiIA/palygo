@@ -10,7 +10,7 @@ uma linha do tempo (`JogoEvento`). No Vercel não há conexão aberta: quem acom
 import math
 import random
 import secrets
-from datetime import datetime
+from datetime import datetime, time, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session as SessaoORM
@@ -305,6 +305,70 @@ def agendar(s: SessaoORM, campeonato_id: int, jogo_id: int, por: Usuario, inicio
     return j
 
 
+def agendar_lote(
+    s: SessaoORM, campeonato_id: int, por: Usuario, escopo: str, inicio: datetime, duracao_min: int, intervalo_min: int = 0,
+    locais: list[str] | None = None, ate: time | None = None, sobrescrever: bool = True,
+) -> dict:
+    """Define os horários de vários jogos de uma vez, um depois do outro: o 1º começa em `inicio` e cada jogo seguinte entra depois de
+    `duracao_min` + `intervalo_min`. Com várias quadras (`locais`) os jogos de uma mesma rodada acontecem juntos, uma quadra cada.
+    Cada rodada começa num horário novo (a equipe não joga duas vezes ao mesmo tempo e o mata-mata espera a rodada anterior).
+    `ate`: horário-limite do dia; o que não couber continua no dia seguinte, na hora de `inicio`.
+    `escopo`: "todos", "grupos", "mata_mata" ou "rodada:N". Só jogos ainda não começados."""
+    c = campeonatos.obter(s, campeonato_id)
+    campeonatos.exigir_gestao(c, por)
+    if not 5 <= duracao_min <= 600:
+        raise ErroNegocio("A duração de cada jogo vai de 5 a 600 minutos.")
+    if not 0 <= intervalo_min <= 240:
+        raise ErroNegocio("O intervalo entre jogos vai de 0 a 240 minutos.")
+    passo = timedelta(minutes=duracao_min + intervalo_min)
+    if ate is not None and (datetime.combine(inicio.date(), ate) - inicio) < timedelta(minutes=duracao_min):
+        raise ErroNegocio("O horário-limite do dia precisa deixar espaço para pelo menos um jogo depois do início.")
+    quadras = [q.strip()[:120] for q in (locais or []) if q and q.strip()]
+    jogos = [j for j in s.scalars(select(Jogo).where(Jogo.campeonato_id == c.id, Jogo.status == J_AGENDADO)) if not j.folga]
+    if escopo == "grupos":
+        jogos = [j for j in jogos if j.fase == "grupos"]
+    elif escopo == "mata_mata":
+        jogos = [j for j in jogos if j.fase == "mata_mata"]
+    elif escopo.startswith("rodada:"):
+        try:
+            n = int(escopo.split(":", 1)[1])
+        except ValueError:
+            raise ErroNegocio("Escolha o que agendar.") from None
+        jogos = [j for j in jogos if j.rodada == n and j.fase != "grupos"]
+    elif escopo != "todos":
+        raise ErroNegocio("Escolha o que agendar.")
+    if not sobrescrever:
+        jogos = [j for j in jogos if j.inicio_previsto is None]
+    if not jogos:
+        raise ErroNegocio("Não há jogos para agendar nessa seleção (eles podem já ter começado ou ter horário).")
+    jogos.sort(key=lambda j: (1 if j.fase == "mata_mata" else 0, j.rodada, j.grupo or "", j.posicao))
+
+    cursor, ultimo_fim, total = inicio, inicio, 0
+    por_rodada: dict[tuple, list[Jogo]] = {}
+    for j in jogos:
+        por_rodada.setdefault((j.fase or "", j.rodada), []).append(j)
+    paralelo = max(1, len(quadras))
+    for lista in por_rodada.values():
+        for i in range(0, len(lista), paralelo):
+            fim = cursor + timedelta(minutes=duracao_min)
+            if ate is not None and (fim.date() > cursor.date() or fim.time() > ate):
+                cursor = datetime.combine(cursor.date() + timedelta(days=1), inicio.time())  # não cabe hoje: recomeça amanhã
+                fim = cursor + timedelta(minutes=duracao_min)
+            for k, j in enumerate(lista[i:i + paralelo]):
+                j.inicio_previsto = cursor
+                if quadras:
+                    j.local = quadras[k]
+                total += 1
+            ultimo_fim = fim
+            cursor += passo
+    c.duracao_jogo_min = duracao_min
+    auditoria.registrar(s, por.id, "campeonato_agenda_lote", "campeonato", c.id, escopo=escopo, inicio=inicio, duracao=duracao_min, intervalo=intervalo_min, jogos=total)
+    equipes = {e for j in jogos for e in (j.equipe_a_id, j.equipe_b_id) if e}
+    _avisar_equipes(s, c, list(equipes), f"📅 Horários de {c.nome}", "A organização definiu os horários dos jogos. Veja nas chaves.", f"agenda:{c.id}:{agora().strftime('%d%H%M')}", excluir=por.id)
+    s.commit()
+    return {"agendados": total, "primeiro": _dt(inicio), "ultimo_fim": _dt(ultimo_fim)}
+
+
 def iniciar(s: SessaoORM, campeonato_id: int, jogo_id: int, por: Usuario) -> Jogo:
     c, j = _travar(s, campeonato_id, jogo_id)
     _exigir_pontuar(s, c, por)
@@ -595,7 +659,7 @@ def chaveamento(s: SessaoORM, c: Campeonato, u: Usuario) -> dict:
         "formato": c.formato, "formato_nome": FORMATOS.get(c.formato or ""), "sorteado_em": _dt(c.sorteado_em), "semente": str(c.sorteio_semente) if c.sorteio_semente else None,  # texto: passa de 2^53 e o JavaScript perderia dígitos
         "rodadas": rodadas, "ao_vivo": [jogo_dict(j) for j in jogos if j.status == J_AO_VIVO],
         "classificacao": classificacao(chave, confirmadas) if c.formato == "pontos_corridos" else [], "campeao": campeao,
-        "grupos": grupos_out, "classificam": c.classificam, "cabecas": cabecas,
+        "grupos": grupos_out, "classificam": c.classificam, "cabecas": cabecas, "duracao_jogo_min": c.duracao_jogo_min,
         "jogos_grupos_restantes": sum(1 for j in de_grupo if j.status != J_ENCERRADO) if c.formato == "grupos" and not chave else 0,
         "equipes": [_eq(e) for e in confirmadas],
         "equipes_confirmadas": len(confirmadas), "equipes_pendentes": pendentes,

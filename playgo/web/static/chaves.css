@@ -88,3 +88,10 @@
 .ch-cab input { width: 52px !important; min-width: 0 !important; flex: none; }
 .ch-cab { justify-content: flex-start; }
 .ch-cabecas label.ch-cab { display: flex; flex-direction: row-reverse; justify-content: flex-end; }
+
+.ch-agenda { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.ch-agenda label { display: grid; gap: 4px; font-weight: 700; font-size: 13px; }
+.ch-agenda input, .ch-agenda select { width: 100%; border: 1px solid var(--border, #e9eaf0); border-radius: 10px; padding: 10px; font: inherit; font-weight: 500; }
+.ch-agenda label.ch-check { display: flex; align-items: center; gap: 8px; }
+.ch-agenda label.ch-check input { width: auto; }
+#ag-res:empty { display: none; }

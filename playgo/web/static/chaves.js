@@ -191,6 +191,23 @@
 
   // ---------------------------------------------------------------- sorteio e mesários
 
+  function painelHorarios(d) {
+    const escopos = d.formato === 'grupos'
+      ? [['todos', 'Tudo (grupos e mata-mata)'], ['grupos', 'Fase de grupos'], ['mata_mata', 'Mata-mata' + (d.rodadas.length ? '' : ' (aparece depois dos grupos)')]]
+      : [['todos', 'Todas as rodadas']].concat(d.rodadas.map((r) => ['rodada:' + r.rodada, r.nome]));
+    const desativa = (v) => (v === 'mata_mata' && !d.rodadas.length ? ' disabled' : '');
+    return '<div class="ch-painel"><h3>🕒 Horários dos jogos</h3><p class="ch-sub">Informe o início e a duração: o sistema marca todos os jogos da seleção, um depois do outro, e avisa as equipes. Cada rodada começa num horário novo.</p>' +
+      '<div class="ch-campo ch-agenda"><label>Agendar<select id="ag-escopo">' + escopos.map(([v, n]) => '<option value="' + v + '"' + desativa(v) + '>' + esc(n) + '</option>').join('') + '</select></label>' +
+      '<label>Início (data e hora)<input type="datetime-local" id="ag-inicio"></label>' +
+      '<label>Duração de cada jogo (min)<input type="number" id="ag-dur" min="5" max="600" value="' + (d.duracao_jogo_min || 40) + '"></label>' +
+      '<label>Intervalo entre jogos (min)<input type="number" id="ag-int" min="0" max="240" value="10"></label>' +
+      '<label>Quadras / campos (separe por vírgula)<input id="ag-locais" placeholder="ex.: Quadra 01, Quadra 02"></label>' +
+      '<label>Não marcar depois de (opcional)<input type="time" id="ag-ate"></label>' +
+      '<label class="ch-check"><input type="checkbox" id="ag-sobre" checked> Substituir horários já definidos</label></div>' +
+      '<p class="ch-sub">Com mais de uma quadra, os jogos de uma mesma rodada acontecem juntos. Se um limite de horário for informado, o que não couber no dia segue no dia seguinte, na hora do início.</p>' +
+      '<button class="ch-btn grande" id="bt-agenda">📅 Aplicar horários</button><p class="ch-aviso" id="ag-res" style="margin-top:10px"></p></div>';
+  }
+
   const opcoes = (de, ate, padrao) => Array.from({ length: ate - de + 1 }, (_, i) => de + i).map((n) => '<option value="' + n + '"' + (n === padrao ? ' selected' : '') + '>' + n + '</option>').join('');
 
   function montarSorteio(el, o) {
@@ -211,6 +228,7 @@
           '<div class="ch-cabecas">' + d.equipes.map((e) => '<label class="ch-cab"><input type="number" min="1" max="' + d.equipes.length + '" data-cabeca="' + e.id + '" placeholder="–"> ' + esc(e.nome) + '</label>').join('') + '</div></div>' +
           '<button class="ch-btn grande" id="bt-sortear" ' + (d.equipes_confirmadas < 2 ? 'disabled' : '') + '>' + (jaTem ? '🔁 Sortear de novo' : '🎲 Sortear agora') + '</button>' : '') +
         '<p class="ch-sub">O sorteio é aleatório (fora os cabeças de chave), fica registrado e as equipes são avisadas.</p></div>' +
+        (jaTem ? painelHorarios(d) : '') +
         '<div class="ch-painel"><h3>📋 Mesários</h3><p class="ch-sub">Pessoas autorizadas a iniciar jogos, marcar o placar e encerrar. Todos os demais só acompanham.</p>' +
         '<div id="mesarios">' + (d.mesarios.length ? d.mesarios.map((m) => '<span class="ch-chip">' + esc(m.arroba) + ' <button data-rm="' + m.usuario_id + '" title="Remover">×</button></span>').join('') : '<span class="ch-sub">Nenhum mesário além de você.</span>') + '</div>' +
         '<div class="ch-campo" style="display:flex;gap:6px"><input id="bt-mes" list="dl-mes" placeholder="@usuario" autocomplete="off"><datalist id="dl-mes"></datalist><button class="ch-btn suave" id="bt-add">Adicionar</button></div></div>';
@@ -234,6 +252,24 @@
           if (toast) toast('Sorteio feito!');
           if (o.aoSortear) o.aoSortear(); else desenhar(await get('/campeonatos/' + id + '/chaves'));
         } catch (e) { if (toast) toast(e.message); bt.disabled = false; }
+      };
+      const ag = el.querySelector('#bt-agenda');
+      if (ag) ag.onclick = async () => {
+        const v = (i) => el.querySelector('#' + i).value;
+        if (!v('ag-inicio')) { if (toast) toast('Informe a data e a hora do primeiro jogo.'); return; }
+        ag.disabled = true;
+        try {
+          const r = await post('/campeonatos/' + id + '/agenda', {
+            escopo: v('ag-escopo'), inicio: v('ag-inicio'), duracao_min: Number(v('ag-dur')), intervalo_min: Number(v('ag-int') || 0),
+            locais: v('ag-locais').split(',').map((x) => x.trim()).filter(Boolean), ate: v('ag-ate') || null, sobrescrever: el.querySelector('#ag-sobre').checked,
+          });
+          const msg = r.agendados + ' jogo' + (r.agendados !== 1 ? 's' : '') + ' agendado' + (r.agendados !== 1 ? 's' : '') + ': de ' + dataHora(r.primeiro) + ' até ' + dataHora(r.ultimo_fim) + '.';
+          if (toast) toast(msg);
+          const d2 = await get('/campeonatos/' + id + '/chaves');
+          await desenhar(d2);
+          const aviso = el.querySelector('#ag-res');
+          if (aviso) aviso.textContent = msg;
+        } catch (e) { if (toast) toast(e.message); ag.disabled = false; }
       };
       let achados = [];
       const campo = el.querySelector('#bt-mes');
