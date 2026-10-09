@@ -228,12 +228,8 @@ def usuario_do_token_pdf(token: str, campeonato_id: int) -> int | None:
     return d["u"] if d.get("c") == campeonato_id else None
 
 
-def anexar_regulamento(s: SessaoORM, campeonato_id: int, por: Usuario, dados: bytes, nome_original: str | None) -> Campeonato:
-    """Guarda o PDF do regulamento (substitui o anterior). Só a organização."""
-    c = obter(s, campeonato_id)
-    exigir_gestao(c, por)
-    if c.status == C_CANCELADO:
-        raise ErroNegocio("Este campeonato foi cancelado e não pode mais ser alterado.")
+def validar_pdf(dados: bytes) -> None:
+    """Confere vazio, tamanho e o conteúdo (o início `%PDF-`, não só a extensão). Chamado antes de criar ou alterar qualquer coisa."""
     limite = settings.limite_pdf_mb
     if not dados:
         raise ErroNegocio("O arquivo está vazio.")
@@ -241,6 +237,15 @@ def anexar_regulamento(s: SessaoORM, campeonato_id: int, por: Usuario, dados: by
         raise ErroNegocio(f"O PDF passa de {limite} MB. Reduza o arquivo e envie de novo.")
     if not dados.startswith(b"%PDF-"):
         raise ErroNegocio("Envie um arquivo PDF.")
+
+
+def anexar_regulamento(s: SessaoORM, campeonato_id: int, por: Usuario, dados: bytes, nome_original: str | None) -> Campeonato:
+    """Guarda o PDF do regulamento (substitui o anterior). Só a organização."""
+    c = obter(s, campeonato_id)
+    exigir_gestao(c, por)
+    if c.status == C_CANCELADO:
+        raise ErroNegocio("Este campeonato foi cancelado e não pode mais ser alterado.")
+    validar_pdf(dados)
     nome = re.sub(r"[^\w .()\-]", "", (nome_original or "regulamento.pdf").rsplit("/", 1)[-1].rsplit("\\", 1)[-1]).strip()[:150] or "regulamento.pdf"
     if not nome.lower().endswith(".pdf"):
         nome += ".pdf"

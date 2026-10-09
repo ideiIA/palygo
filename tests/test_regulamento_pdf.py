@@ -58,3 +58,35 @@ def test_enviar_trocar_baixar_e_remover_o_pdf_do_regulamento(banco, monkeypatch)
         assert cli.delete(url, headers=outro).status_code == 403
         assert cli.delete(url, headers=org).json()["regulamento_pdf"] is None
         assert cli.get(visto["url"]).status_code == 404
+
+
+def test_enviar_o_pdf_ja_na_criacao_do_campeonato_pelo_site(banco):
+    from playgo.web.app import app
+
+    with TestClient(app) as cli:
+        email = f"{uuid.uuid4().hex[:10]}@teste.local"
+        assert cli.post("/cadastro", data={"nome": "Org Site", "email": email, "senha": "senha-de-teste-1", "usuario": f"o{uuid.uuid4().hex[:10]}", "aceito_termos": "1"}, follow_redirects=False).status_code == 303
+        mods = {m["codigo"]: m["id"] for m in cli.get("/api/v1/modalidades").json()}
+        hoje = agora().date()
+        dados = {"nome": "Copa com PDF", "modalidade_id": mods["futsal"], "data_inicio": str(hoje + timedelta(days=20)), "inscricao_ate": str(hoje + timedelta(days=10)), "max_equipes": 8, "atletas_por_equipe": 5,
+                 "local_nome": "Ginásio", "latitude": str(PERTO[0]), "longitude": str(PERTO[1])}
+        assert "enctype=\"multipart/form-data\"" in cli.get("/campeonatos/novo").text and 'name="regulamento_pdf"' in cli.get("/campeonatos/novo").text
+
+        # PDF inválido: nada é criado
+        antes = len(cli.get("/api/v1/explorar?tipos=campeonato&raio=0").json().get("campeonatos", []))
+        r = cli.post("/campeonatos", data=dados, files={"regulamento_pdf": ("r.pdf", b"nao e pdf", "application/pdf")}, follow_redirects=False)
+        assert r.status_code == 303 and "/campeonatos/" not in r.headers["location"].replace("/campeonatos/novo", "")
+        assert len(cli.get("/api/v1/explorar?tipos=campeonato&raio=0").json().get("campeonatos", [])) == antes
+
+        # PDF válido: o campeonato nasce já com o regulamento
+        r = cli.post("/campeonatos", data=dados, files={"regulamento_pdf": ("Regulamento Final.pdf", PDF, "application/pdf")}, follow_redirects=False)
+        assert r.status_code == 303
+        cid = int(r.headers["location"].rsplit("/", 1)[1])
+        k = cli.get(f"/api/v1/campeonatos/{cid}").json()
+        assert k["regulamento_pdf"]["nome"] == "Regulamento Final.pdf"
+        assert cli.get(k["regulamento_pdf"]["url"]).content == PDF
+
+        # sem arquivo continua funcionando
+        r = cli.post("/campeonatos", data=dados | {"nome": "Copa sem PDF"}, follow_redirects=False)
+        sem = cli.get(f"/api/v1/campeonatos/{int(r.headers['location'].rsplit('/', 1)[1])}").json()
+        assert sem["regulamento_pdf"] is None

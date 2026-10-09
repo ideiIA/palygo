@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from urllib.parse import urlencode
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -411,8 +411,11 @@ def criar_campeonato(
     s: Sessao, usuario: Atual, nome: str = Form(), modalidade_id: int = Form(), data_inicio: str = Form(), inscricao_ate: str = Form(),
     max_equipes: int = Form(), atletas_por_equipe: int = Form(5), arena_id: str = Form(""), data_fim: str = Form(""), categoria: str = Form(""),
     local_nome: str = Form(""), latitude: str = Form(""), longitude: str = Form(""), valor_inscricao: str = Form(""), premiacao: str = Form(""),
-    regulamento: str = Form(""), descricao: str = Form(""),
+    regulamento: str = Form(""), descricao: str = Form(""), regulamento_pdf: UploadFile | None = File(None),
 ):
+    pdf = regulamento_pdf.file.read(settings.limite_pdf_mb * 1024 * 1024 + 1) if regulamento_pdf is not None and regulamento_pdf.filename else b""
+    if pdf:
+        campeonatos.validar_pdf(pdf)  # antes de criar: um PDF inválido não deixa um campeonato pela metade
     c = campeonatos.criar(
         s, usuario,
         campeonatos.NovoCampeonato(
@@ -422,6 +425,8 @@ def criar_campeonato(
             premiacao=premiacao or None, regulamento=regulamento or None, descricao=descricao or None,
         ),
     )
+    if pdf:
+        campeonatos.anexar_regulamento(s, c.id, usuario, pdf, regulamento_pdf.filename)
     return RedirectResponse(f"/campeonatos/{c.id}", status_code=303)
 
 

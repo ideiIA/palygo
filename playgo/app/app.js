@@ -591,14 +591,25 @@
         <div class="duas"><div class="campo"><label>Equipes</label><input type="number" name="max_equipes" value="16" min="2" required></div><div class="campo"><label>Atletas/equipe</label><input type="number" name="atletas_por_equipe" value="5" min="1" required></div></div>
         <div class="duas"><div class="campo"><label>Inscrição (R$)</label><input name="valor_inscricao" inputmode="decimal"></div><div class="campo"><label>Premiação</label><input name="premiacao"></div></div>
         <div class="campo"><label>Categoria</label><input name="categoria"></div>
-        <div class="campo"><label>Regulamento</label><textarea name="regulamento"></textarea></div>
+        <div class="campo"><label>Regulamento</label><textarea name="regulamento" placeholder="Resumo ou texto (opcional se enviar o PDF)"></textarea></div>
+        <div class="campo"><label>Regulamento em PDF (opcional)</label><input type="file" id="arq-pdf-novo" accept="application/pdf,.pdf"><span class="suave">Se já tem o regulamento definido em reunião, envie agora. Dá para trocar depois em Editar.</span></div>
         <button class="btn roxo bloco">Publicar campeonato</button></form>`, () => {
         $('#f-camp').onsubmit = async (ev) => {
           ev.preventDefault(); const d = dadosForm(ev.target);
           if (!d.arena_id && !estado.pos) { $('#erro').innerHTML = '<p class="aviso erro">Escolha uma arena ou toque no 📍 do topo para informar sua localização.</p>'; return; }
           const corpo = { nome: d.nome, modalidade_id: Number(d.modalidade_id), arena_id: num(d.arena_id), local_nome: d.local_nome || '', data_inicio: d.data_inicio, inscricao_ate: d.inscricao_ate, max_equipes: Number(d.max_equipes), atletas_por_equipe: Number(d.atletas_por_equipe), valor_inscricao: num(d.valor_inscricao) || 0, premiacao: d.premiacao || null, categoria: d.categoria || null, regulamento: d.regulamento || null };
           if (!d.arena_id) { corpo.latitude = estado.pos.lat; corpo.longitude = estado.pos.lng; }
-          try { const c = await post('/campeonatos', corpo); toast('Campeonato publicado! 🏆'); location.hash = '#/campeonato/' + c.id; } catch (e) { $('#erro').innerHTML = `<p class="aviso erro">${esc(e.message)}</p>`; }
+          const pdf = $('#arq-pdf-novo').files[0];
+          if (pdf && !/\.pdf$/i.test(pdf.name)) { $('#erro').innerHTML = '<p class="aviso erro">Envie um arquivo PDF.</p>'; return; }
+          try {
+            const c = await post('/campeonatos', corpo);
+            if (pdf) {
+              const form = new FormData();
+              form.append('arquivo', pdf);
+              try { await api('/campeonatos/' + c.id + '/regulamento', { metodo: 'POST', form }); toast('Campeonato publicado com o regulamento em PDF! 🏆'); location.hash = '#/campeonato/' + c.id; }
+              catch (er) { toast('Campeonato publicado, mas o PDF não foi enviado: ' + er.message); location.hash = '#/campeonato/' + c.id + '/editar'; }
+            } else { toast('Campeonato publicado! 🏆'); location.hash = '#/campeonato/' + c.id; }
+          } catch (e) { $('#erro').innerHTML = `<p class="aviso erro">${esc(e.message)}</p>`; }
         };
       });
     } catch (e) { erroTela(e); }
