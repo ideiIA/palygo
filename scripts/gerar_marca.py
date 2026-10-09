@@ -96,7 +96,7 @@ def _degrade(tam: int) -> Image.Image:
     for j in range(64):
         for i in range(64):
             t = (i + j) / 126
-            px[i, j] = tuple(round(a + (b - a) * t) for a, b in zip(ROXO, ROSA))
+            px[i, j] = tuple(round(a + (b - a) * t) for a, b in zip(ROXO, ROSA, strict=True))
     return pequeno.resize((tam, tam), Image.BICUBIC)
 
 
@@ -123,7 +123,7 @@ def icone_png(tam: int, arredondado: bool = True, ss: int = 4) -> Image.Image:
     def contorno(ps):
         ps = [(x * k, y * k) for x, y in ps]
         cd.polygon(ps, fill=cor)
-        for (xa, ya), (xb, yb) in zip(ps, ps[1:] + ps[:1]):
+        for (xa, ya), (xb, yb) in zip(ps, ps[1:] + ps[:1], strict=True):
             cd.line([(xa, ya), (xb, yb)], fill=cor, width=larg)
         for x, y in ps:
             cd.ellipse([x - larg / 2, y - larg / 2, x + larg / 2, y + larg / 2], fill=cor)
@@ -174,7 +174,7 @@ def logo_horizontal_png(largura: int, escuro_sobre_claro: bool = True) -> Image.
         gp = grad.load()
         for i in range(larg_go):
             t = i / max(1, larg_go - 1)
-            c = tuple(round(a + (b - a) * t) for a, b in zip(ROXO, ROSA)) + (255,)
+            c = tuple(round(a + (b - a) * t) for a, b in zip(ROXO, ROSA, strict=True)) + (255,)
             for j in range(alt):
                 gp[i, j] = c
         go = Image.new("RGBA", (larg_go, alt), (0, 0, 0, 0))
