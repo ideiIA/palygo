@@ -106,3 +106,7 @@ O app tem as mesmas funções em abas, mais Criar jogo / atividade / grupo / cam
 ## Marca
 
 O ícone (bola de futebol em movimento com as linhas de velocidade em lima, sobre o degradê roxo→rosa), o logo horizontal, o favicon e a imagem de compartilhamento são gerados por `scripts/gerar_marca.py` (substitui o antigo `gerar_icones.py`). Saída em `playgo/web/static/marca/` e `playgo/app/icon-*.png`. Cores: roxo `#6c4cff`, rosa `#ff3d81`, lima `#b7f34b`, azul-noite `#14213d`.
+
+## Página de divulgação
+
+A raiz `/` mostra, para quem não está logado, a página de divulgação (`templates/landing.html`, `static/landing.css`): proposta de valor, funcionalidades, campeonatos, arenas, esportes, **planos com os preços reais da tabela `planos`** (`planos.vitrine`), confiança, perguntas frequentes e os caminhos **Criar conta**, **Entrar** e **Abrir o app** (`/app/`). Quem está logado continua indo direto ao início.

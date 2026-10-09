@@ -195,7 +195,9 @@ def _entrar_no_site(cliente):
 
 def test_site_exige_login_e_renderiza_as_telas(cliente, banco):
     anonimo = TestClient(cliente.app)
-    assert anonimo.get("/", follow_redirects=False).headers["location"] == "/entrar"
+    pagina_inicial = anonimo.get("/", follow_redirects=False)  # sem login: página de divulgação, com os caminhos de entrada
+    assert pagina_inicial.status_code == 200 and 'href="/cadastro"' in pagina_inicial.text and 'href="/entrar"' in pagina_inicial.text and 'href="/app/"' in pagina_inicial.text
+    assert "Encontre onde jogar" in pagina_inicial.text and "Organizador" in pagina_inicial.text
     assert anonimo.get("/entrar").status_code == 200
     assert anonimo.get("/app/").status_code == 200  # PWA
     assert anonimo.get("/app/manifest.json").json()["short_name"] == "PlayGo"
@@ -241,7 +243,7 @@ def test_site_login_errado_e_sair(cliente, banco):
     assert r.status_code == 400 and "incorretos" in r.text
     email = _entrar_no_site(c)
     assert c.post("/sair", follow_redirects=False).status_code == 303
-    assert c.get("/", follow_redirects=False).status_code == 303
+    assert "Criar minha conta" in c.get("/").text  # deslogado volta para a página de divulgação
     assert c.post("/entrar", data={"email": email, "senha": "senha-de-teste-1"}, follow_redirects=False).status_code == 303
 
 

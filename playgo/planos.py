@@ -62,6 +62,33 @@ def todas(s: SessaoORM) -> list[Regras]:
     return [regras(s, c) for c in CODIGOS]
 
 
+def vitrine(s: SessaoORM) -> list[dict]:
+    """Os planos como a página de divulgação os apresenta (preço e limites vêm da tabela, que o administrador edita)."""
+    itens = {
+        "gratuito": ["Ver tudo e participar de atividades", "Publicar e comentar no feed", "Entrar em grupos e comunidades", "Acompanhar campeonatos e jogos ao vivo"],
+        "pro": ["Organizar atividades", "{participantes}", "{abertas}", "Convidar por @usuario ou link"],
+        "organizador": ["Atividades sem limite", "Campeonatos com sorteio, grupos e chaves", "Placar ao vivo, mesários e agenda em lote", "Regulamento em PDF e elenco das equipes"],
+        "arena": ["Tudo do plano Organizador", "Arenas, quadras e agenda", "Divulgação de horários para atletas próximos", "Painel de ocupação e alcance"],
+    }
+    resumo = {
+        "gratuito": "Para quem joga e acompanha.",
+        "pro": "Para quem organiza os rachas e jogos do grupo.",
+        "organizador": "Para quem faz campeonatos e torneios.",
+        "arena": "Para quem administra quadras e arenas.",
+    }
+    saida = []
+    for r in todas(s):
+        lista = []
+        for item in itens[r.codigo]:
+            if item == "{participantes}":
+                item = f"Até {r.max_participantes} participantes por atividade" if r.max_participantes else "Participantes sem limite"
+            elif item == "{abertas}":
+                item = f"Até {r.max_atividades_abertas} atividades abertas ao mesmo tempo" if r.max_atividades_abertas else "Atividades abertas sem limite"
+            lista.append(item)
+        saida.append({"codigo": r.codigo, "nome": r.nome, "valor": float(r.valor_mensal), "resumo": resumo[r.codigo], "itens": lista})
+    return saida
+
+
 def _dict(r: Regras) -> dict:
     return {
         "codigo": r.codigo, "nome": r.nome, "valor_mensal": float(r.valor_mensal), "max_participantes": r.max_participantes,

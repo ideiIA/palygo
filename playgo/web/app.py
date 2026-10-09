@@ -213,7 +213,16 @@ def sair(request: Request):
 
 
 @app.get("/")
-def inicio(request: Request, s: Sessao, usuario: Atual):
+def inicio(request: Request, s: Sessao, usuario: Opcional):
+    """Sem login, a página de divulgação (com o caminho para criar conta, entrar e abrir o app); com login, o início."""
+    if usuario is None:
+        return templates.TemplateResponse(
+            request, "landing.html",
+            {"planos": planos.vitrine(s), "modalidades": modalidades.ativas(s), "teste_dias": settings.teste_dias, "ano": agora().year},
+        )
+    pendencia = contas.pendencias(usuario)
+    if pendencia:
+        raise PrecisaCompletar(pendencia)
     return pagina(request, s, usuario, "home.html", "home", feed=feed.montar(s, usuario))
 
 
