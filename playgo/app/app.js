@@ -475,15 +475,23 @@
         ${k.regulamento ? `<div class="painel"><h3>Regulamento</h3><p style="margin-top:6px;white-space:pre-line">${esc(k.regulamento)}</p></div>` : ''}
         <div class="painel" style="margin-top:12px"><h3>Equipes (${k.equipes_lista.length})</h3>
         ${k.equipes_lista.length ? k.equipes_lista.map((e) => `<div style="padding:10px 0;border-top:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(e.nome)}</b><span class="tag ${e.status === 'confirmada' ? 'verde' : 'laranja'}">${e.status === 'confirmada' ? 'Confirmada' : 'Pendente'}</span></div>
-          <div class="suave">Capitão: ${esc(e.capitao)} • ${e.membros.filter((m) => m.status === 'confirmado').length}/${k.atletas_por_equipe}</div>
+          <div class="suave">Capitão: ${esc(e.capitao)} • ${e.membros.filter((m) => m.status === 'confirmado').length}/${k.atletas_por_equipe}${k.cadastro_elenco && e.componentes ? ' • ' + e.componentes + ' no elenco' : ''}</div>
+          ${e.elenco_acesso ? `<div class="elenco"><details><summary>👥 Elenco (nome e RG), técnico e capitão</summary><div class="elenco-corpo" data-equipe="${e.id}"></div></details></div>` : ''}
           ${e.membros.map((m) => `<div class="suave">• ${esc(m.arroba || m.nome)}${m.status === 'convidado' ? ' (convidado)' : ''}</div>`).join('')}
           ${e.capitao_id === estado.usuario.id ? `<div style="margin-top:8px;display:flex;gap:6px"><button class="btn suave pequeno" data-acao="convidar" data-id="${e.id}">+ Convidar atleta</button><button class="btn perigo pequeno" data-acao="cancelar-eq" data-id="${e.id}">Cancelar</button></div>` : ''}
           ${k.sou_gestor && e.status === 'pendente' ? `<div style="margin-top:8px;display:flex;gap:6px"><button class="btn roxo pequeno" data-acao="decidir-eq" data-id="${e.id}" data-v="1">Confirmar</button><button class="btn perigo pequeno" data-acao="decidir-eq" data-id="${e.id}" data-v="0">Recusar</button></div>` : ''}</div>`).join('') : '<p class="suave">Nenhuma equipe inscrita ainda.</p>'}</div>
-        ${k.sou_gestor ? `<div class="painel" style="margin-top:12px"><h3>Gestão</h3><div class="campo" style="margin-top:10px"><select id="sel-status">${[['aberto', 'Inscrições abertas'], ['em_andamento', 'Em andamento'], ['encerrado', 'Encerrado'], ['cancelado', 'Cancelado']].map(([v, n]) => `<option value="${v}" ${k.status === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div><button class="btn suave bloco" data-acao="status-camp" data-id="${k.id}">Atualizar situação</button></div>` : ''}
+        ${k.sou_gestor ? `<div class="painel" style="margin-top:12px"><h3>Gestão</h3><div class="campo" style="margin-top:10px"><select id="sel-status">${[['aberto', 'Inscrições abertas'], ['em_andamento', 'Em andamento'], ['encerrado', 'Encerrado'], ['cancelado', 'Cancelado']].map(([v, n]) => `<option value="${v}" ${k.status === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div><button class="btn suave bloco" data-acao="status-camp" data-id="${k.id}">Atualizar situação</button><a class="btn suave bloco" style="margin-top:8px" href="#/campeonato/${k.id}/editar">✏️ Editar campeonato</a></div>` : ''}
         ${k.sou_gestor ? organizacaoExtra('campeonato', k) : ''}
         ${muralBloco('Mural do campeonato', k.mural_acesso, 'Para equipes inscritas e organização. O local das publicações é sempre o do campeonato.')}`,
       () => {
         if (k.mural_acesso) montarMural('mural', { escopo: 'campeonato', escopoId: k.id });
+        $$('.elenco-corpo').forEach((el) => {
+          el.closest('details').addEventListener('toggle', function once(ev) {
+            if (!ev.target.open) return;
+            ev.target.removeEventListener('toggle', once);
+            Elenco.montar(el, { get: (c) => api(c), post, put: (c, b) => api(c, { metodo: 'PUT', corpo: b }), apagar: (c) => api(c, { metodo: 'DELETE' }), equipeId: Number(el.dataset.equipe), toast });
+          });
+        });
         const f = $('#f-eq');
         if (f) f.onsubmit = async (ev) => { ev.preventDefault(); try { await post(`/campeonatos/${k.id}/equipes`, { nome: dadosForm(ev.target).nome }); toast('Equipe inscrita!'); vCampeonato(k.id); } catch (e) { toast(e.message); } };
       });
@@ -493,7 +501,7 @@
   // Abas do campeonato: visão geral, chaves, ao vivo e (organização) sorteio
   function abasCamp(k, ativa) {
     const a = (id, href, nome) => `<a href="${href}" class="${ativa === id ? 'ativa' : ''}">${nome}</a>`;
-    return `<nav class="ch-abas">${a('geral', '#/campeonato/' + k.id, 'Visão geral')}${a('chaves', '#/campeonato/' + k.id + '/chaves', '🏆 Chaves')}${a('ao_vivo', '#/campeonato/' + k.id + '/ao-vivo', '🔴 Ao vivo')}${k.sou_gestor ? a('sorteio', '#/campeonato/' + k.id + '/sorteio', '🎲 Sorteio') : ''}</nav>`;
+    return `<nav class="ch-abas">${a('geral', '#/campeonato/' + k.id, 'Visão geral')}${a('chaves', '#/campeonato/' + k.id + '/chaves', '🏆 Chaves')}${a('ao_vivo', '#/campeonato/' + k.id + '/ao-vivo', '🔴 Ao vivo')}${k.sou_gestor ? a('sorteio', '#/campeonato/' + k.id + '/sorteio', '🎲 Sorteio') + a('editar', '#/campeonato/' + k.id + '/editar', '✏️ Editar') : ''}</nav>`;
   }
 
   // Sub-páginas do campeonato (chaves, ao vivo, jogo e sorteio): a tela é o chaves.js, igual no site
@@ -513,6 +521,44 @@
         else Chaves.montarSorteio(el, { get, post, apagar: (c) => api(c, { metodo: 'DELETE' }), id, toast, aoSortear: () => { location.hash = '#/campeonato/' + id + '/chaves'; } });
       });
     } catch (e) { erroTela(e); }
+  }
+
+  async function vEditarCampeonato(id) {
+    carregando();
+    try {
+      const k = await api('/campeonatos/' + id);
+      if (!k.sou_gestor) { location.hash = '#/campeonato/' + id; return; }
+      const e = k.edicao;
+      const v = (x) => esc(x == null ? '' : x);
+      montar(`<a href="#/campeonato/${id}" class="suave">← ${esc(k.nome)}</a><h1 style="margin:8px 0 0">✏️ Editar campeonato</h1>${abasCamp(k, 'editar')}
+        <form id="f-editar" class="painel"><div id="erro"></div>
+        <div class="campo"><label>Nome do campeonato</label><input name="nome" required maxlength="150" value="${v(e.nome)}"></div>
+        <div class="campo"><label>Categoria</label><input name="categoria" maxlength="120" value="${v(e.categoria)}"></div>
+        <div class="campo"><label>Local</label><input name="local_nome" required maxlength="200" value="${v(e.local_nome)}"></div>
+        <div class="duas"><div class="campo"><label>Início</label><input type="date" name="data_inicio" required value="${v(e.data_inicio)}"></div><div class="campo"><label>Fim (opcional)</label><input type="date" name="data_fim" value="${v(e.data_fim)}"></div></div>
+        <div class="campo"><label>Inscrições até</label><input type="date" name="inscricao_ate" required value="${v(e.inscricao_ate)}"></div>
+        <div class="duas"><div class="campo"><label>Máximo de equipes</label><input type="number" name="max_equipes" min="2" required value="${v(e.max_equipes)}"></div><div class="campo"><label>Atletas por equipe</label><input type="number" name="atletas_por_equipe" min="1" required value="${v(e.atletas_por_equipe)}"></div></div>
+        <div class="campo"><label>Inscrição por equipe (R$)</label><input type="number" name="valor_inscricao" min="0" step="0.01" value="${v(e.valor_inscricao)}"></div>
+        <div class="campo"><label>Premiação</label><input name="premiacao" maxlength="200" value="${v(e.premiacao)}"></div>
+        <div class="campo"><label>Sobre</label><textarea name="descricao" rows="3">${v(e.descricao)}</textarea></div>
+        <div class="campo"><label>Regulamento</label><textarea name="regulamento" rows="6">${v(e.regulamento)}</textarea></div>
+        <label class="suave" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px"><input type="checkbox" name="cadastro_elenco" ${e.cadastro_elenco ? 'checked' : ''} style="margin-top:3px"><span>Liberar o cadastro do elenco: o capitão de cada equipe informa nome e RG dos componentes, o técnico e quem é o capitão. O RG só aparece para a organização e para o capitão.</span></label>
+        <button class="btn roxo bloco">Salvar alterações</button></form>`, () => {
+        $('#f-editar').onsubmit = async (ev) => {
+          ev.preventDefault();
+          const d = dadosForm(ev.target);
+          try {
+            await api('/campeonatos/' + id, { metodo: 'PUT', corpo: {
+              nome: d.nome, categoria: d.categoria, local_nome: d.local_nome, data_inicio: d.data_inicio, data_fim: d.data_fim || null, inscricao_ate: d.inscricao_ate,
+              max_equipes: Number(d.max_equipes), atletas_por_equipe: Number(d.atletas_por_equipe), valor_inscricao: d.valor_inscricao || '0', premiacao: d.premiacao,
+              descricao: d.descricao, regulamento: d.regulamento, cadastro_elenco: !!d.cadastro_elenco,
+            } });
+            toast('Campeonato atualizado.');
+            location.hash = '#/campeonato/' + id;
+          } catch (er) { $('#erro').innerHTML = `<p class="aviso erro">${esc(er.message)}</p>`; }
+        };
+      });
+    } catch (er) { erroTela(er); }
   }
 
   async function vNovoCampeonato() {
@@ -1124,7 +1170,7 @@
       case 'grupo': return vGrupo(arg, arg2);
       case 'novo-grupo': return vNovoGrupo();
       case 'campeonatos': return vCampeonatos();
-      case 'campeonato': return ['chaves', 'ao-vivo', 'sorteio', 'jogo'].includes(arg2) ? vCampSub(arg, arg2, arg3) : vCampeonato(arg);
+      case 'campeonato': return arg2 === 'editar' ? vEditarCampeonato(arg) : ['chaves', 'ao-vivo', 'sorteio', 'jogo'].includes(arg2) ? vCampSub(arg, arg2, arg3) : vCampeonato(arg);
       case 'novo-campeonato': return vNovoCampeonato();
       case 'arena': return vArena(arg);
       case 'gestao': return vGestao();

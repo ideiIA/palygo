@@ -28,6 +28,15 @@ def tela_jogo(campeonato_id: int, jogo_id: int, request: Request, s: Sessao, usu
     return _sub(request, s, usuario, campeonato_id, "jogo", jogo_id=jogo_id)
 
 
+@app.get("/campeonatos/{campeonato_id}/editar")
+def tela_editar(campeonato_id: int, request: Request, s: Sessao, usuario: Atual):
+    c = campeonatos.obter(s, campeonato_id)
+    if not campeonatos.pode_gerir(c, usuario):
+        request.session["erro"] = "Só a organização do campeonato pode editá-lo."
+        return RedirectResponse(f"/campeonatos/{campeonato_id}", status_code=303)
+    return pagina(request, s, usuario, "campeonato_editar.html", "campeonatos", k=detalhes.campeonato(s, c, usuario))
+
+
 @app.get("/campeonatos/{campeonato_id}/sorteio")
 def tela_sorteio(campeonato_id: int, request: Request, s: Sessao, usuario: Atual):
     c = campeonatos.obter(s, campeonato_id)

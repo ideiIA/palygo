@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_camp_abas.html" import abas %}
+{% block titulo %}Editar {{ k.nome }} — PlayGo{% endblock %}
+{% block conteudo %}
+<link rel="stylesheet" href="/static/chaves.css">
+{% set e = k.edicao %}
+<div class="detalhe-topo"><div><span class="tag {{ k.modalidade.cor }}">{{ k.modalidade.icone }} {{ k.modalidade.nome|upper }}</span><h1>✏️ Editar campeonato</h1></div></div>
+{{ abas(k, 'editar') }}
+<form id="f-editar" class="panel" style="max-width:760px;display:grid;gap:14px">
+  <div class="field"><label>Nome do campeonato</label><input name="nome" required maxlength="150" value="{{ e.nome }}"></div>
+  <div class="field"><label>Categoria</label><input name="categoria" maxlength="120" value="{{ e.categoria or '' }}" placeholder="Ex.: Masculino, B e C…"></div>
+  <div class="field"><label>Local</label><input name="local_nome" required maxlength="200" value="{{ e.local_nome }}"></div>
+  <div class="two" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+    <div class="field"><label>Início</label><input type="date" name="data_inicio" required value="{{ e.data_inicio }}"></div>
+    <div class="field"><label>Fim (opcional)</label><input type="date" name="data_fim" value="{{ e.data_fim or '' }}"></div>
+    <div class="field"><label>Inscrições até</label><input type="date" name="inscricao_ate" required value="{{ e.inscricao_ate }}"></div>
+  </div>
+  <div class="two" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+    <div class="field"><label>Máximo de equipes</label><input type="number" name="max_equipes" min="2" required value="{{ e.max_equipes }}"></div>
+    <div class="field"><label>Atletas por equipe</label><input type="number" name="atletas_por_equipe" min="1" required value="{{ e.atletas_por_equipe }}"></div>
+    <div class="field"><label>Inscrição por equipe (R$)</label><input type="number" name="valor_inscricao" min="0" step="0.01" value="{{ e.valor_inscricao }}"></div>
+  </div>
+  <div class="field"><label>Premiação</label><input name="premiacao" maxlength="200" value="{{ e.premiacao or '' }}"></div>
+  <div class="field"><label>Sobre</label><textarea name="descricao" rows="3">{{ e.descricao or '' }}</textarea></div>
+  <div class="field"><label>Regulamento</label><textarea name="regulamento" rows="6">{{ e.regulamento or '' }}</textarea></div>
+  <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600"><input type="checkbox" name="cadastro_elenco" {{ 'checked' if e.cadastro_elenco }} style="margin-top:4px">
+    <span>Liberar o cadastro do elenco: o capitão de cada equipe informa o nome e o RG dos componentes, o técnico e quem é o capitão. <span class="suave">O RG só aparece para a organização e para o capitão da equipe.</span></span></label>
+  <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn purple">Salvar alterações</button><a class="btn soft" href="/campeonatos/{{ k.id }}">Cancelar</a></div>
+  <p class="aviso" id="erro-editar" style="display:none"></p>
+</form>
+<script>
+  window.addEventListener('load', function () {
+    const f = document.getElementById('f-editar');
+    f.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const v = (n) => f.elements[n].value;
+      const corpo = {
+        nome: v('nome'), categoria: v('categoria'), local_nome: v('local_nome'), data_inicio: v('data_inicio'), data_fim: v('data_fim') || null,
+        inscricao_ate: v('inscricao_ate'), max_equipes: Number(v('max_equipes')), atletas_por_equipe: Number(v('atletas_por_equipe')),
+        valor_inscricao: v('valor_inscricao') || '0', premiacao: v('premiacao'), descricao: v('descricao'), regulamento: v('regulamento'),
+        cadastro_elenco: f.elements['cadastro_elenco'].checked,
+      };
+      try {
+        await webApi('/campeonatos/{{ k.id }}', { metodo: 'PUT', corpo });
+        location.href = '/campeonatos/{{ k.id }}';
+      } catch (e) {
+        const a = document.getElementById('erro-editar');
+        a.textContent = e.message; a.style.display = 'block'; a.className = 'aviso erro';
+        window.scrollTo(0, document.body.scrollHeight);
+      }
+    });
+  });
+</script>
+{% endblock %}

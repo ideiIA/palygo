@@ -131,3 +131,26 @@
 .av-sub { font-size: 13px; color: var(--muted, #667085); }
 .av-setinfo { text-align: center; font-weight: 700; font-size: 13px; margin: 0 0 8px; }
 .jv-eq small { font-size: 13px; font-weight: 600; opacity: .75; }
+
+/* elenco da equipe */
+.elenco { margin-top: 10px; }
+.elenco details > summary { cursor: pointer; font-weight: 800; color: var(--purple, #6c4cff); }
+.el-cab { display: flex; justify-content: space-between; margin: 8px 0; align-items: baseline; }
+.el-cont { font-size: 12px; color: var(--muted, #667085); }
+.el-linha { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border, #e9eaf0); align-items: center; flex-wrap: wrap; }
+.el-linha.capitao { background: #fffbe9; }
+.el-rg { font-size: 12px; color: var(--muted, #667085); }
+.el-tag { display: inline-block; font-size: 11px; font-weight: 900; border-radius: 6px; padding: 1px 6px; text-transform: uppercase; }
+.el-tag.cap { background: #fff0df; color: #d96a00; }
+.el-tag.tec { background: #e5f1ff; color: #1b64c8; }
+.el-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+.el-acoes button { border: 0; border-radius: 8px; padding: 5px 9px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; background: #f0edff; color: var(--purple, #6c4cff); }
+.el-acoes button.perigo { background: #ffe9ea; color: #d6303a; }
+.el-form { display: grid; gap: 6px; margin-top: 10px; background: #f7f8fc; border-radius: 12px; padding: 10px; }
+.el-form input[type=text], .el-form input:not([type]), .el-form select { border: 1px solid var(--border, #e9eaf0); border-radius: 10px; padding: 9px; font: inherit; width: 100%; }
+.el-form .el-cap { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; }
+.el-form .el-cap input { width: auto; }
+.el-bts { display: flex; gap: 6px; }
+.el-btn { border: 0; border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 800; cursor: pointer; background: var(--purple, #6c4cff); color: #fff; }
+.el-btn.suave { background: #f0edff; color: var(--purple, #6c4cff); }
+.el-aviso { font-size: 13px; color: var(--muted, #667085); margin: 6px 0; }

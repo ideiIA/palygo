@@ -1,6 +1,7 @@
 """Campeonatos e torneios (RF-007, RF-008, RF-021, RF-022): cadastro, inscrição de equipes e convites.
 Sorteio, chaves, classificação e jogo ao vivo (RF-009) ficam em `chaves.py`."""
 
+import zlib
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -8,7 +9,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session as SessaoORM
 
-from . import notificacoes, planos
+from . import auditoria, notificacoes, planos
 from .db import agora
 from .erros import ErroNegocio, NaoEncontrado, SemPermissao
 from .geo import distancia_sql, formatar_km
@@ -126,6 +127,72 @@ def criar(s: SessaoORM, usuario: Usuario, d: NovoCampeonato) -> Campeonato:
     s.add(c)
     s.flush()
     _avisar_proximos(s, c)
+    s.commit()
+    return c
+
+
+CAMPOS_EDITAVEIS = (
+    "nome", "categoria", "descricao", "regulamento", "premiacao", "premiacao_valor", "local_nome", "data_inicio", "data_fim",
+    "inscricao_ate", "max_equipes", "atletas_por_equipe", "valor_inscricao", "cadastro_elenco",
+)
+
+
+def editar(s: SessaoORM, campeonato_id: int, por: Usuario, **campos) -> Campeonato:
+    """Organização, gestor da arena ou administrador ajustam o campeonato (nome, datas, vagas, valor, regulamento…).
+    As equipes são avisadas quando mudam datas ou local. Só os campos informados mudam."""
+    c = s.scalar(select(Campeonato).where(Campeonato.id == campeonato_id).with_for_update(of=Campeonato))
+    if c is None:
+        raise NaoEncontrado("Campeonato não encontrado.")
+    exigir_gestao(c, por)
+    if c.status == C_CANCELADO:
+        raise ErroNegocio("Este campeonato foi cancelado e não pode mais ser alterado.")
+    novos = {k: v for k, v in campos.items() if k in CAMPOS_EDITAVEIS}
+    if not novos:
+        return c
+    if "nome" in novos:
+        novos["nome"] = (novos["nome"] or "").strip()
+        if not novos["nome"]:
+            raise ErroNegocio("Dê um nome ao campeonato.")
+        novos["nome"] = novos["nome"][:150]
+    for k in ("categoria", "descricao", "regulamento", "premiacao"):
+        if k in novos:
+            novos[k] = (novos[k] or "").strip() or None
+    if "local_nome" in novos:
+        novos["local_nome"] = (novos["local_nome"] or "").strip()[:200]
+        if not novos["local_nome"]:
+            raise ErroNegocio("Informe o local do campeonato.")
+    inicio = novos.get("data_inicio", c.data_inicio)
+    fim = novos.get("data_fim", c.data_fim)
+    inscricao = novos.get("inscricao_ate", c.inscricao_ate)
+    if inscricao > inicio:
+        raise ErroNegocio("O prazo de inscrição precisa ser até o início do campeonato.")
+    if fim and fim < inicio:
+        raise ErroNegocio("A data final não pode ser anterior à inicial.")
+    if "max_equipes" in novos:
+        ativas = equipes_ativas(s, c)
+        if novos["max_equipes"] < max(2, ativas):
+            raise ErroNegocio(f"O campeonato precisa de pelo menos 2 equipes e já tem {ativas} inscrita{'s' if ativas != 1 else ''}.")
+    if "atletas_por_equipe" in novos:
+        contagens = s.execute(
+            select(func.count()).select_from(EquipeMembro).join(Equipe, Equipe.id == EquipeMembro.equipe_id)
+            .where(Equipe.campeonato_id == c.id, Equipe.status.in_(ATIVAS_EQUIPE), EquipeMembro.status != M_RECUSADO).group_by(EquipeMembro.equipe_id)
+        ).scalars().all()
+        maior = max(contagens, default=0)
+        if novos["atletas_por_equipe"] < max(1, maior):
+            raise ErroNegocio(f"Atletas por equipe não pode ficar abaixo de {max(1, maior)}: já há equipe com essa quantidade.")
+    if "valor_inscricao" in novos and (novos["valor_inscricao"] is None or novos["valor_inscricao"] < 0):
+        raise ErroNegocio("O valor da inscrição não pode ser negativo.")
+    antes = {k: getattr(c, k) for k in novos}
+    for k, v in novos.items():
+        setattr(c, k, v)
+    mudou = {k: v for k, v in novos.items() if antes[k] != v}
+    if mudou:
+        auditoria.registrar(s, por.id, "campeonato_editar", "campeonato", c.id, campos=",".join(sorted(mudou)))
+        if {"data_inicio", "data_fim", "inscricao_ate", "local_nome"} & set(mudou):
+            versao = zlib.crc32(f"{c.data_inicio}{c.data_fim}{c.inscricao_ate}{c.local_nome}".encode())
+            for e in s.scalars(select(Equipe).where(Equipe.campeonato_id == c.id, Equipe.status.in_(ATIVAS_EQUIPE))):
+                if e.capitao_id != por.id:
+                    notificacoes.avisar(s, e.capitao_id, "campeonato", f"📅 {c.nome}: datas ou local atualizados", f"Início em {c.data_inicio.strftime('%d/%m/%Y')} · {c.local_nome}.", f"/campeonatos/{c.id}", None, f"campedit:{c.id}:{e.id}:{versao}")
     s.commit()
     return c
 

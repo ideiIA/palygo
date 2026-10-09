@@ -55,3 +55,10 @@ principalmente os prazos, a base legal de cada tratamento, a cláusula de respon
 - **Comunicação de incidente à ANPD**, DPO formal, RIPD e registro de operações de tratamento são processos da empresa, não do código.
 - O contato do encarregado (`PLAYGO_CONTATO_PRIVACIDADE`) e o nome do controlador (`PLAYGO_CONTROLADOR_NOME`) vêm com valor provisório: preencher.
 - Nomes reais ainda aparecem para participantes em listas antigas de grupos de esporte (mural, comunidades, atividades e campeonatos já usam `@usuario`).
+
+## Elenco das equipes (nome e RG de terceiros)
+
+Quando a organização libera o cadastro do elenco, o capitão informa **nome e RG de componentes que podem não ter conta** no PlayGo (e podem ser menores).
+Medidas: cadastro só mediante liberação do campeonato; RG visível apenas à organização e ao capitão da equipe; contagem pública sem nomes;
+nada do RG em avisos ou na trilha de auditoria; remoção a qualquer momento. **Pendente de parecer jurídico**: base legal para tratar dados de
+terceiros/menores informados pelo capitão, prazo de guarda e eliminação ao fim do campeonato, e se o aviso de privacidade deve ser exibido aos componentes.

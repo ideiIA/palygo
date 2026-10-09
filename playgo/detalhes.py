@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session as SessaoORM
 
-from . import campeonatos, escopos, grupos, vagas
+from . import campeonatos, elenco, escopos, grupos, vagas
 from . import serializadores as ser
 from .db import agora
 from .geo import haversine
@@ -97,14 +97,24 @@ def campeonato(s: SessaoORM, c: Campeonato, usuario: Usuario | None) -> dict:
         return {
             "id": e.id, "nome": e.nome, "status": e.status, "capitao": e.capitao.arroba, "capitao_id": e.capitao_id,
             "completa": len([m for m in ativos if m.status == "confirmado"]) >= c.atletas_por_equipe,
+            "componentes": contagem.get(e.id, 0),
+            "elenco_acesso": bool(c.cadastro_elenco and usuario and (gere or e.capitao_id == usuario.id)),
             "membros": [_pessoa(m.usuario, {"status": m.status}) for m in ativos],
         }
 
     visiveis = [e for e in c.equipes if e.status in ("pendente", "confirmada")]
+    contagem = elenco.contagens(s, [e.id for e in visiveis])
     d.update(
         {
             "descricao": c.descricao,
             "regulamento": c.regulamento,
+            "cadastro_elenco": bool(c.cadastro_elenco),
+            "edicao": {
+                "nome": c.nome, "categoria": c.categoria, "descricao": c.descricao, "regulamento": c.regulamento, "premiacao": c.premiacao,
+                "premiacao_valor": float(c.premiacao_valor) if c.premiacao_valor is not None else None, "local_nome": c.local_nome,
+                "data_inicio": c.data_inicio.isoformat(), "data_fim": c.data_fim.isoformat() if c.data_fim else None, "inscricao_ate": c.inscricao_ate.isoformat(),
+                "max_equipes": c.max_equipes, "atletas_por_equipe": c.atletas_por_equipe, "valor_inscricao": float(c.valor_inscricao or 0), "cadastro_elenco": bool(c.cadastro_elenco),
+            } if gere else None,
             "premiacao_valor": float(c.premiacao_valor) if c.premiacao_valor else None,
             "status": c.status,
             "sou_gestor": gere,

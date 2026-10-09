@@ -418,6 +418,8 @@ class Campeonato(Base):
     grupos_qtd: Mapped[int | None] = mapped_column(Integer)  # formato "grupos": quantos grupos
     classificam: Mapped[int | None] = mapped_column(Integer)  # formato "grupos": quantas equipes de cada grupo vão ao mata-mata
     duracao_jogo_min: Mapped[int | None] = mapped_column(Integer)  # última duração usada na agenda em lote (preenche o formulário)
+    # A organização libera o cadastro do elenco (nome e RG dos componentes e o técnico, com o capitão marcado) por equipe
+    cadastro_elenco: Mapped[bool] = mapped_column(Boolean, default=False)
     # Regras de pontuação: "simples" (gols/pontos corridos) ou "sets" (vôlei, tênis…). Nulo = simples.
     placar_modo: Mapped[str | None] = mapped_column(String(8))
     sets_melhor_de: Mapped[int | None] = mapped_column(Integer)  # 3 = melhor de 3 (vence com 2 sets)
@@ -537,6 +539,21 @@ class ChaveEquipe(Base):
     equipe_id: Mapped[int] = mapped_column(ForeignKey("equipes.id", ondelete="CASCADE"), primary_key=True)
     grupo: Mapped[str | None] = mapped_column(String(2))
     cabeca: Mapped[int | None] = mapped_column(Integer)
+
+
+class EquipeComponente(Base):
+    """Componente cadastrado pelo capitão (ou pela organização): nome e RG, sem precisar de conta no PlayGo. `funcao` = atleta | tecnico;
+    `capitao` marca o capitão da equipe em quadra (no máximo um atleta). O RG só é visto por quem organiza e pelo capitão da equipe."""
+
+    __tablename__ = "equipe_componentes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    equipe_id: Mapped[int] = mapped_column(ForeignKey("equipes.id", ondelete="CASCADE"), index=True)
+    nome: Mapped[str] = mapped_column(String(120))
+    rg: Mapped[str] = mapped_column(String(20))
+    funcao: Mapped[str] = mapped_column(String(8), default="atleta")
+    capitao: Mapped[bool] = mapped_column(Boolean, default=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=agora)
 
 
 class CampeonatoMesario(Base):

@@ -37,6 +37,7 @@ def agora() -> datetime:
 _COLUNAS_NOVAS: tuple[str, ...] = (
     "ALTER TABLE campeonatos ADD COLUMN IF NOT EXISTS formato varchar(20)",
     "ALTER TABLE campeonatos ADD COLUMN IF NOT EXISTS duracao_jogo_min integer",
+    "ALTER TABLE campeonatos ADD COLUMN IF NOT EXISTS cadastro_elenco boolean NOT NULL DEFAULT false",
     "ALTER TABLE campeonatos ADD COLUMN IF NOT EXISTS placar_modo varchar(8)",
     "ALTER TABLE campeonatos ADD COLUMN IF NOT EXISTS sets_melhor_de integer",
     "ALTER TABLE campeonatos ADD COLUMN IF NOT EXISTS pontos_set integer",

@@ -54,6 +54,7 @@
         {% for v, n in (('aberto','Inscrições abertas'),('em_andamento','Em andamento'),('encerrado','Encerrado'),('cancelado','Cancelado')) %}<option value="{{ v }}" {{ 'selected' if k.status == v }}>{{ n }}</option>{% endfor %}
       </select><button class="btn soft">Atualizar situação</button>
     </form>
+    <p style="margin-top:10px"><a class="btn soft" href="/campeonatos/{{ k.id }}/editar">✏️ Editar campeonato (nome, datas, vagas, elenco)</a></p>
     <p class="suave">O sorteio do chaveamento, os mesários e a condução dos jogos ficam em <a href="/campeonatos/{{ k.id }}/sorteio">🎲 Sorteio</a>; todo mundo acompanha em <a href="/campeonatos/{{ k.id }}/chaves">Chaves</a> e <a href="/campeonatos/{{ k.id }}/ao-vivo">Ao vivo</a>.</p>
     {% endif %}
   </div>
@@ -65,7 +66,8 @@
       {% for e in k.equipes_lista %}
       <div class="card" style="padding:14px">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>{{ e.nome }}</b><span class="tag {{ 'verde' if e.status == 'confirmada' else 'laranja' }}">{{ 'Confirmada' if e.status == 'confirmada' else 'Pendente' }}</span></div>
-        <div class="suave">Capitão: {{ e.capitao }} • {{ e.membros|selectattr('status', 'equalto', 'confirmado')|list|length }}/{{ k.atletas_por_equipe }} atletas</div>
+        <div class="suave">Capitão: {{ e.capitao }} • {{ e.membros|selectattr('status', 'equalto', 'confirmado')|list|length }}/{{ k.atletas_por_equipe }} atletas{% if k.cadastro_elenco and e.componentes %} • {{ e.componentes }} no elenco{% endif %}</div>
+        {% if e.elenco_acesso %}<div class="elenco"><details><summary>👥 Elenco (nome e RG), técnico e capitão</summary><div class="elenco-corpo" data-equipe="{{ e.id }}"></div></details></div>{% endif %}
         <div class="pessoas" style="margin-top:8px">
           {% for m in e.membros %}<div class="pessoa"><span class="avatar pequeno">{{ m.iniciais }}</span><span>{{ m.arroba }}</span>{% if m.status == 'convidado' %}<span class="tag cinza">convidado</span>{% endif %}</div>{% endfor %}
         </div>
@@ -89,7 +91,14 @@
     {% else %}{{ c.vazio('Nenhuma equipe inscrita ainda.') }}{% endif %}
   </div>
 </div>
+<script src="/static/elenco.js"></script>
 <script>
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.elenco-corpo').forEach((el) => {
+      const abrir = () => Elenco.montar(el, { get: (c) => webApi(c), post: (c, b) => webApi(c, { metodo: 'POST', corpo: b || {} }), put: (c, b) => webApi(c, { metodo: 'PUT', corpo: b }), apagar: (c) => webApi(c, { metodo: 'DELETE' }), equipeId: Number(el.dataset.equipe), toast: window.toast });
+      el.closest('details').addEventListener('toggle', function once(ev) { if (ev.target.open) { abrir(); ev.target.removeEventListener('toggle', once); } });
+    });
+  });
   // Convite: busca pelo nome e guarda o id escolhido no campo oculto do formulário
   document.querySelectorAll('.convite').forEach((f) => {
     const campo = f.querySelector('.busca-atleta'), oculto = f.querySelector('[name=usuario_id]'), lista = f.querySelector('datalist');
