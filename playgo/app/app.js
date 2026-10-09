@@ -508,7 +508,7 @@
         const get = (c) => api(c);
         const href = (j) => '#/campeonato/' + id + '/jogo/' + j.id;
         if (modo === 'chaves') Chaves.montarChaves(el, { get, href, id });
-        else if (modo === 'ao-vivo' || modo === 'ao_vivo') Chaves.montarAoVivo(el, { get, href, id });
+        else if (modo === 'ao-vivo' || modo === 'ao_vivo') Chaves.montarAoVivo(el, { get, post, href, id, toast });
         else if (modo === 'jogo') Chaves.montarJogo(el, { get, post, id, jogo, toast });
         else Chaves.montarSorteio(el, { get, post, apagar: (c) => api(c, { metodo: 'DELETE' }), id, toast, aoSortear: () => { location.hash = '#/campeonato/' + id + '/chaves'; } });
       });

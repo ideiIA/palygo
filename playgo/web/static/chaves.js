@@ -94,25 +94,82 @@
     repetir(el, 10000, atualizar);
   }
 
+  // Controles de quem conduz (organização e mesários) direto na lista do "Ao vivo"
+  function controlesLista(j, d) {
+    if (!d.pode_pontuar) return '';
+    const mata = d.formato === 'eliminatoria' || j.fase === 'mata_mata';
+    const desempate = mata && j.a && j.b ? '<select class="av-venc" title="Se empatar, quem venceu no desempate"><option value="">Desempate (se empatar)</option><option value="' + j.a.id + '">' + esc(j.a.nome) + '</option><option value="' + j.b.id + '">' + esc(j.b.nome) + '</option></select>' : '';
+    if (j.status === 'agendado') {
+      if (!j.a || !j.b) return '<div class="ch-ctl"><span class="ch-sub">Aguardando as equipes serem definidas.</span></div>';
+      return '<div class="ch-ctl"><button class="ch-btn" data-av="iniciar" data-j="' + j.id + '">▶ Iniciar</button>' +
+        '<details><summary>Lançar resultado direto</summary><div class="av-res"><input type="number" min="0" max="999" class="av-a" placeholder="0" aria-label="Placar ' + esc(j.a.nome) + '"> × <input type="number" min="0" max="999" class="av-b" placeholder="0" aria-label="Placar ' + esc(j.b.nome) + '">' + desempate +
+        '<button class="ch-btn suave" data-av="resultado" data-j="' + j.id + '">Lançar e encerrar</button></div></details></div>';
+    }
+    if (j.status === 'ao_vivo') {
+      const lado = (eq, l) => '<div class="av-lado"><b>' + esc(eq.nome) + '</b><div><button class="ch-btn grande" data-av="marcar" data-j="' + j.id + '" data-lado="' + l + '" data-d="1">+1</button><button class="ch-btn suave" data-av="marcar" data-j="' + j.id + '" data-lado="' + l + '" data-d="-1">−1</button></div></div>';
+      return '<div class="ch-ctl"><div class="av-lados">' + lado(j.a, 'a') + lado(j.b, 'b') + '</div>' + desempate +
+        '<button class="ch-btn perigo" data-av="encerrar" data-j="' + j.id + '">🏁 Encerrar jogo</button> <a class="ch-link" href="' + esc(o_href(j)) + '">abrir jogo (lances)</a></div>';
+    }
+    return d.pode_gerir ? '<div class="ch-ctl"><button class="ch-btn suave" data-av="reabrir" data-j="' + j.id + '">Reabrir para corrigir</button></div>' : '';
+  }
+  let o_href = (j) => '#';
+
   function montarAoVivo(el, o) {
-    const { get, href, id } = o;
-    let ultimo = '';
-    const atualizar = async () => {
+    const { get, post, href, id, toast } = o;
+    o_href = href;
+    let ultimo = '', ultimoD = null;
+    const bloco = (t, js, vazio, d) => '<h3 class="ch-tit">' + t + '</h3>' + (js.length ? '<div class="ch-grade' + (d.pode_pontuar ? ' av' : '') + '">' + js.map((j) => '<div class="ch-av" data-jogo="' + j.id + '">' + cartao(j, href) + controlesLista(j, d) + '</div>').join('') + '</div>' : '<p class="ch-sub">' + vazio + '</p>');
+    const desenhar = (d) => {
+      const todos = todosJogos(d);
+      const prox = todos.filter((j) => j.status === 'agendado' && j.a && j.b).sort((x, y) => (x.inicio_previsto || '9').localeCompare(y.inicio_previsto || '9'));
+      const fim = todos.filter((j) => j.status === 'encerrado' && !j.folga).reverse().slice(0, 8);
+      el.innerHTML = (d.pode_pontuar ? '<p class="ch-aviso">Você conduz este campeonato: inicie jogos, lance o placar e encerre direto daqui.</p>' : '') +
+        (d.campeao ? '<div class="ch-campeao">🏆 Campeão: <b>' + esc(d.campeao.nome) + '</b></div>' : '') +
+        bloco('🔴 Ao vivo agora', d.ao_vivo, 'Nenhum jogo ao vivo neste momento.', d) + bloco('Próximos jogos', prox.slice(0, d.pode_pontuar ? 16 : 8), 'Sem jogos agendados.', d) + bloco('Últimos resultados', fim, 'Ainda não há resultados.', d);
+    };
+    // não troca a tela enquanto alguém digita um placar
+    const digitando = () => ['INPUT', 'SELECT'].includes((document.activeElement || {}).tagName) && el.contains(document.activeElement);
+    const atualizar = async (forcar) => {
+      if (digitando() && !forcar) return;
       try {
         const d = await get('/campeonatos/' + id + '/chaves');
+        ultimoD = d;
         const s = JSON.stringify(d);
-        if (s === ultimo) return;
+        if (s === ultimo && !forcar) return;
         ultimo = s;
-        const todos = todosJogos(d);
-        const prox = todos.filter((j) => j.status === 'agendado' && j.a && j.b).sort((x, y) => (x.inicio_previsto || '9').localeCompare(y.inicio_previsto || '9'));
-        const fim = todos.filter((j) => j.status === 'encerrado' && !j.folga).reverse().slice(0, 8);
-        const bloco = (t, js, vazio) => '<h3 class="ch-tit">' + t + '</h3>' + (js.length ? '<div class="ch-grade">' + js.map((j) => cartao(j, href)).join('') + '</div>' : '<p class="ch-sub">' + vazio + '</p>');
-        el.innerHTML = (d.campeao ? '<div class="ch-campeao">🏆 Campeão: <b>' + esc(d.campeao.nome) + '</b></div>' : '') +
-          bloco('🔴 Ao vivo agora', d.ao_vivo, 'Nenhum jogo ao vivo neste momento.') + bloco('Próximos jogos', prox.slice(0, 8), 'Sem jogos agendados.') + bloco('Últimos resultados', fim, 'Ainda não há resultados.');
+        desenhar(d);
       } catch (e) { if (!ultimo) el.innerHTML = '<div class="ch-vazio">' + esc(e.message) + '</div>'; }
     };
-    atualizar();
-    repetir(el, 5000, atualizar);
+    el.addEventListener('click', async (ev) => {
+      const b = ev.target.closest('[data-av]');
+      if (!b || b.disabled) return;
+      const acao = b.dataset.av, jid = b.dataset.j, base = '/campeonatos/' + id + '/jogos/' + jid;
+      const caixa = b.closest('[data-jogo]');
+      const venc = caixa && caixa.querySelector('.av-venc') && caixa.querySelector('.av-venc').value;
+      b.disabled = true;
+      try {
+        if (acao === 'iniciar') await post(base + '/iniciar', {});
+        else if (acao === 'marcar') await post(base + '/marcar', { lado: b.dataset.lado, delta: Number(b.dataset.d) });
+        else if (acao === 'encerrar') {
+          if (!confirm('Encerrar o jogo com o placar atual?')) { b.disabled = false; return; }
+          await post(base + '/encerrar', { vencedor_id: venc ? Number(venc) : null });
+        } else if (acao === 'reabrir') {
+          if (!confirm('Reabrir este jogo para corrigir o resultado?')) { b.disabled = false; return; }
+          await post(base + '/reabrir', {});
+        } else if (acao === 'resultado') {
+          const a = caixa.querySelector('.av-a').value, c2 = caixa.querySelector('.av-b').value;
+          if (a === '' || c2 === '') { if (toast) toast('Informe o placar das duas equipes.'); b.disabled = false; return; }
+          if (!confirm('Lançar o resultado ' + a + ' × ' + c2 + ' e encerrar o jogo?')) { b.disabled = false; return; }
+          await post(base + '/iniciar', {});
+          await post(base + '/placar', { a: Number(a), b: Number(c2) });
+          await post(base + '/encerrar', { vencedor_id: venc ? Number(venc) : null });
+          if (toast) toast('Resultado lançado.');
+        }
+        await atualizar(true);
+      } catch (e) { if (toast) toast(e.message); else alert(e.message); await atualizar(true); }
+    });
+    atualizar(true);
+    repetir(el, 5000, () => atualizar(false));
   }
 
   // ---------------------------------------------------------------- jogo ao vivo

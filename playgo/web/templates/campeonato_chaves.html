@@ -21,7 +21,7 @@
     const id = {{ k.id }};
     const href = (j) => '/campeonatos/' + id + '/jogos/' + j.id;
     {% if modo == 'chaves' %}Chaves.montarChaves(el, { get, href, id });
-    {% elif modo == 'ao_vivo' %}Chaves.montarAoVivo(el, { get, href, id });
+    {% elif modo == 'ao_vivo' %}Chaves.montarAoVivo(el, { get, post, href, id, toast: window.toast });
     {% elif modo == 'jogo' %}el.insertAdjacentHTML('beforebegin', '<p><a href="/campeonatos/' + id + '/chaves">← Voltar às chaves</a></p>');
     Chaves.montarJogo(el, { get, post, id, jogo: {{ jogo_id }}, toast: window.toast });
     {% else %}Chaves.montarSorteio(el, { get, post, apagar, id, toast: window.toast, aoSortear: () => (location.href = '/campeonatos/' + id + '/chaves') });{% endif %}

@@ -95,3 +95,17 @@
 .ch-agenda label.ch-check { display: flex; align-items: center; gap: 8px; }
 .ch-agenda label.ch-check input { width: auto; }
 #ag-res:empty { display: none; }
+
+/* "Ao vivo": controles de quem conduz */
+.ch-av { display: grid; gap: 4px; }
+.ch-grade.av { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.ch-ctl { background: #f7f8fc; border: 1px solid var(--border, #e9eaf0); border-radius: 12px; padding: 8px; display: grid; gap: 8px; }
+.ch-ctl .ch-btn { padding: 8px 12px; }
+.ch-ctl .ch-btn.grande { padding: 10px 18px; font-size: 16px; }
+.ch-ctl details summary { cursor: pointer; font-weight: 700; font-size: 13px; color: var(--purple, #6c4cff); }
+.av-lados { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center; }
+.av-lado > div { display: flex; gap: 6px; justify-content: center; margin-top: 4px; }
+.av-res { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.av-res input[type=number] { width: 62px; border: 1px solid var(--border, #e9eaf0); border-radius: 8px; padding: 8px; font: inherit; text-align: center; }
+.ch-ctl select { border: 1px solid var(--border, #e9eaf0); border-radius: 8px; padding: 8px; font: inherit; width: 100%; }
+.ch-link { font-size: 12px; margin-left: 6px; }
