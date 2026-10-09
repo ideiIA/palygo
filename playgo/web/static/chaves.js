@@ -24,25 +24,36 @@
       const mostra = j.status !== 'agendado' && !j.folga;
       return '<div class="ch-linha' + (venceu ? ' venceu' : '') + '"><span class="ch-nome">' + (!eq && j.folga ? '<i class="ch-tbd">folga</i>' : nomeEq(eq)) + '</span><b class="ch-pl">' + (mostra ? pl : '') + '</b></div>';
     };
-    return '<a class="ch-jogo ' + j.status + '" href="' + esc(href(j)) + '">' + linha(j.a, 'a') + linha(j.b, 'b') + '<div class="ch-rod">' + rodape(j) + '</div></a>';
+    const parciais = j.sets && j.sets.length ? '<div class="ch-sets">' + j.sets.map((x) => '<span class="' + (x.encerrado ? '' : 'atual') + '">' + x.a + '–' + x.b + '</span>').join('') + '</div>' : '';
+    return '<a class="ch-jogo ' + j.status + '" href="' + esc(href(j)) + '">' + linha(j.a, 'a') + linha(j.b, 'b') + parciais + '<div class="ch-rod">' + rodape(j) + '</div></a>';
   }
 
-  function tabela(c) {
+  // Jogo por sets: o que mostrar de cada lado (pontos do set em andamento, sets ganhos e a lista dos sets)
+  function lerSets(j, rg) {
+    const sets = j.sets || [];
+    const aberto = sets.length && !sets[sets.length - 1].encerrado ? sets[sets.length - 1] : null;
+    const decidido = Math.max(j.placar_a, j.placar_b) >= rg.sets_para_vencer;
+    const numero = aberto ? aberto.numero : Math.min(sets.length + 1, rg.melhor_de);
+    const alvo = rg.melhor_de > 1 && numero >= rg.melhor_de ? rg.pontos_tiebreak : rg.pontos_set;
+    return { aberto, decidido, numero, alvo, pa: aberto ? aberto.a : 0, pb: aberto ? aberto.b : 0, fechados: sets.filter((x) => x.encerrado) };
+  }
+
+  function tabela(c, sets) {
     if (!c.length) return '';
-    return '<div class="ch-tabela-wrap"><table class="ch-tabela"><thead><tr><th>#</th><th>Equipe</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>SG</th></tr></thead><tbody>' +
+    return '<div class="ch-tabela-wrap"><table class="ch-tabela"><thead><tr><th>#</th><th>Equipe</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>' + (sets ? 'SS' : 'SG') + '</th></tr></thead><tbody>' +
       c.map((l) => '<tr><td>' + l.posicao + '</td><td class="ch-eq">' + esc(l.equipe.nome) + '</td><td><b>' + l.pontos + '</b></td><td>' + l.jogos + '</td><td>' + l.vitorias + '</td><td>' + l.empates + '</td><td>' + l.derrotas + '</td><td>' + (l.saldo > 0 ? '+' : '') + l.saldo + '</td></tr>').join('') +
-      '</tbody></table></div><p class="ch-sub">Vitória 3 pontos, empate 1. Desempate: saldo e depois gols/pontos pró.</p>';
+      '</tbody></table></div><p class="ch-sub">' + (sets ? 'Vitória sem ir ao set decisivo vale 3 pontos; vitória no decisivo, 2; derrota no decisivo, 1. Desempate: saldo de sets e depois de pontos.' : 'Vitória 3 pontos, empate 1. Desempate: saldo e depois gols/pontos pró.') + '</p>';
   }
 
-  function tabelaGrupo(g, classificam) {
-    return '<div class="ch-tabela-wrap"><table class="ch-tabela"><thead><tr><th>#</th><th>Equipe</th><th>P</th><th>J</th><th>SG</th></tr></thead><tbody>' +
+  function tabelaGrupo(g, sets) {
+    return '<div class="ch-tabela-wrap"><table class="ch-tabela"><thead><tr><th>#</th><th>Equipe</th><th>P</th><th>J</th><th>' + (sets ? 'SS' : 'SG') + '</th></tr></thead><tbody>' +
       g.map((l) => '<tr class="' + (l.classifica ? 'ch-classif' : '') + '"><td>' + l.posicao + '</td><td class="ch-eq">' + esc(l.equipe.nome) + (l.cabeca ? ' <span class="ch-cabeca" title="Cabeça de chave">C' + l.cabeca + '</span>' : '') + '</td><td><b>' + l.pontos + '</b></td><td>' + l.jogos + '</td><td>' + (l.saldo > 0 ? '+' : '') + l.saldo + '</td></tr>').join('') +
       '</tbody></table></div>';
   }
 
   function htmlGrupos(d, href) {
-    let h = '<h3 class="ch-tit">Fase de grupos</h3><p class="ch-sub">Classificam-se os ' + d.classificam + ' primeiros de cada grupo (linhas destacadas). Desempate: saldo, depois pontos/gols pró.</p><div class="ch-grupos">';
-    h += d.grupos.map((g) => '<div class="ch-grupo"><h4>Grupo ' + esc(g.grupo) + '</h4>' + tabelaGrupo(g.classificacao) +
+    let h = '<h3 class="ch-tit">Fase de grupos</h3><p class="ch-sub">Classificam-se os ' + d.classificam + ' primeiros de cada grupo (linhas destacadas). Desempate: saldo' + (d.regras_placar && d.regras_placar.modo === 'sets' ? ' de sets e de pontos' : ', depois pontos/gols pró') + '.</p><div class="ch-grupos">';
+    h += d.grupos.map((g) => '<div class="ch-grupo"><h4>Grupo ' + esc(g.grupo) + '</h4>' + tabelaGrupo(g.classificacao, d.regras_placar && d.regras_placar.modo === 'sets') +
       g.rodadas.map((r) => '<div class="ch-sub" style="margin:8px 0 4px">' + esc(r.nome) + '</div><div class="ch-grade pequeno">' + r.jogos.map((j) => cartao(j, href)).join('') + '</div>').join('') + '</div>').join('');
     h += '</div>';
     if (d.rodadas.length) h += '<h3 class="ch-tit">Mata-mata</h3><div class="ch-chave">' + d.rodadas.map((r) => '<div class="ch-coluna"><h4>' + esc(r.nome) + '</h4><div class="ch-col-jogos">' + r.jogos.map((j) => cartao(j, href)).join('') + '</div></div>').join('') + '</div>';
@@ -65,7 +76,7 @@
     } else if (d.formato === 'eliminatoria') {
       h += '<div class="ch-chave">' + d.rodadas.map((r) => '<div class="ch-coluna"><h4>' + esc(r.nome) + '</h4><div class="ch-col-jogos">' + r.jogos.map((j) => cartao(j, href)).join('') + '</div></div>').join('') + '</div>';
     } else {
-      h += '<h3 class="ch-tit">Classificação</h3>' + tabela(d.classificacao);
+      h += '<h3 class="ch-tit">Classificação</h3>' + tabela(d.classificacao, d.regras_placar && d.regras_placar.modo === 'sets');
       h += d.rodadas.map((r) => '<h3 class="ch-tit">' + esc(r.nome) + '</h3><div class="ch-grade">' + r.jogos.map((j) => cartao(j, href)).join('') + '</div>').join('');
     }
     return h;
@@ -97,12 +108,15 @@
   // Controles de quem conduz (organização e mesários) direto na lista do "Ao vivo"
   function controlesLista(j, d) {
     if (!d.pode_pontuar) return '';
-    const mata = d.formato === 'eliminatoria' || j.fase === 'mata_mata';
+    const porSets = d.regras_placar && d.regras_placar.modo === 'sets';
+    const mata = (d.formato === 'eliminatoria' || j.fase === 'mata_mata') && !porSets;
     const desempate = mata && j.a && j.b ? '<select class="av-venc" title="Se empatar, quem venceu no desempate"><option value="">Desempate (se empatar)</option><option value="' + j.a.id + '">' + esc(j.a.nome) + '</option><option value="' + j.b.id + '">' + esc(j.b.nome) + '</option></select>' : '';
     if (j.status === 'agendado') {
       if (!j.a || !j.b) return '<div class="ch-ctl"><span class="ch-sub">Aguardando as equipes serem definidas.</span></div>';
       return '<div class="ch-ctl"><button class="ch-btn" data-av="iniciar" data-j="' + j.id + '">▶ Iniciar</button>' +
-        '<details><summary>Lançar resultado direto</summary><div class="av-res"><input type="number" min="0" max="999" class="av-a" placeholder="0" aria-label="Placar ' + esc(j.a.nome) + '"> × <input type="number" min="0" max="999" class="av-b" placeholder="0" aria-label="Placar ' + esc(j.b.nome) + '">' + desempate +
+        '<details><summary>Lançar resultado direto</summary><div class="av-res">' + (porSets
+          ? '<input class="av-sets" placeholder="Sets: 25-20, 18-25, 15-12" aria-label="Pontos de cada set">'
+          : '<input type="number" min="0" max="999" class="av-a" placeholder="0" aria-label="Placar ' + esc(j.a.nome) + '"> × <input type="number" min="0" max="999" class="av-b" placeholder="0" aria-label="Placar ' + esc(j.b.nome) + '">') + desempate +
         '<button class="ch-btn suave" data-av="resultado" data-j="' + j.id + '">Lançar e encerrar</button></div></details></div>';
     }
     if (j.status === 'ao_vivo') {
@@ -114,13 +128,18 @@
 
   // Jogo ao vivo: um embaixo do outro, com as duas equipes lado a lado (nome, placar e marcações de cada uma)
   function quadroVivo(j, d) {
+    const rg = d.regras_placar || { modo: 'simples' };
+    const ss = rg.modo === 'sets' ? lerSets(j, rg) : null;
     const time = (eq, l) => {
-      const pl = l === 'a' ? j.placar_a : j.placar_b;
+      const pl = ss ? (l === 'a' ? ss.pa : ss.pb) : (l === 'a' ? j.placar_a : j.placar_b);
+      const subt = ss ? '<div class="av-sub">Sets: <b>' + (l === 'a' ? j.placar_a : j.placar_b) + '</b></div>' : '';
       const bt = d.pode_pontuar ? '<div class="av-bt"><button class="ch-btn grande" data-av="marcar" data-j="' + j.id + '" data-lado="' + l + '" data-d="1">+1</button><button class="ch-btn suave" data-av="marcar" data-j="' + j.id + '" data-lado="' + l + '" data-d="-1">−1</button></div>' : '';
-      return '<div class="av-time"><div class="av-nome">' + esc(eq.nome) + '</div><div class="av-pl">' + pl + '</div>' + bt + '</div>';
+      return '<div class="av-time"><div class="av-nome">' + esc(eq.nome) + '</div><div class="av-pl">' + pl + '</div>' + subt + bt + '</div>';
     };
+    const setInfo = ss ? '<div class="av-setinfo">' + (ss.decidido ? 'Jogo decidido — encerre o jogo' : 'Set ' + ss.numero + ' de ' + rg.melhor_de + ' · até ' + ss.alvo + (ss.numero >= rg.melhor_de && rg.melhor_de > 1 ? ' (decisivo)' : '')) +
+      (ss.fechados.length ? ' · <span class="ch-sub">' + ss.fechados.map((x) => x.a + '–' + x.b).join(' · ') + '</span>' : '') + '</div>' : '';
     return '<div class="av-quadro"><div class="av-topo"><span class="ch-vivo">● AO VIVO</span><span class="ch-sub">' + esc([j.rodada_nome, j.local].filter(Boolean).join(' · ')) + '</span>' +
-      '<a class="ch-link" href="' + esc(o_href(j)) + '">lance a lance →</a></div><div class="av-times">' + time(j.a, 'a') + '<div class="av-x">×</div>' + time(j.b, 'b') + '</div></div>';
+      '<a class="ch-link" href="' + esc(o_href(j)) + '">lance a lance →</a></div>' + setInfo + '<div class="av-times">' + time(j.a, 'a') + '<div class="av-x">×</div>' + time(j.b, 'b') + '</div></div>';
   }
 
   function montarAoVivo(el, o) {
@@ -166,6 +185,14 @@
         } else if (acao === 'reabrir') {
           if (!confirm('Reabrir este jogo para corrigir o resultado?')) { b.disabled = false; return; }
           await post(base + '/reabrir', {});
+        } else if (acao === 'resultado' && caixa.querySelector('.av-sets')) {
+          const sets = [...caixa.querySelector('.av-sets').value.matchAll(/(\d+)\s*[-–xX×]\s*(\d+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+          if (!sets.length) { if (toast) toast('Informe os sets, por exemplo: 25-20, 18-25, 15-12.'); b.disabled = false; return; }
+          if (!confirm('Lançar os sets ' + sets.map((x) => x.join('-')).join(', ') + ' e encerrar o jogo?')) { b.disabled = false; return; }
+          await post(base + '/iniciar', {});
+          await post(base + '/sets', { sets });
+          await post(base + '/encerrar', {});
+          if (toast) toast('Resultado lançado.');
         } else if (acao === 'resultado') {
           const a = caixa.querySelector('.av-a').value, c2 = caixa.querySelector('.av-b').value;
           if (a === '' || c2 === '') { if (toast) toast('Informe o placar das duas equipes.'); b.disabled = false; return; }
@@ -185,6 +212,16 @@
   // ---------------------------------------------------------------- jogo ao vivo
 
   function placarHtml(d) {
+    const rg = d.regras_placar || { modo: 'simples' };
+    if (rg.modo === 'sets') {
+      const ss = lerSets(d, rg);
+      const lado = (eq, pontos, sets, id) => '<div class="jv-eq' + (d.vencedor_id && eq && d.vencedor_id === id ? ' venceu' : '') + '"><span>' + nomeEq(eq) + '</span><b>' + pontos + '</b><small>Sets: ' + sets + '</small></div>';
+      return '<div class="jv-topo"><span class="ch-sub">' + esc(d.rodada_nome) + (d.local ? ' · ' + esc(d.local) : '') + '</span><span class="jv-status ' + d.status + '">' + (d.status === 'ao_vivo' ? '● ' : '') + ROTULO[d.status] + '</span></div>' +
+        (d.status === 'ao_vivo' ? '<p class="ch-sub" style="text-align:center;margin:0 0 6px">' + (ss.decidido ? 'Jogo decidido — encerre o jogo' : 'Set ' + ss.numero + ' de ' + rg.melhor_de + ' · até ' + ss.alvo + ' pontos (diferença de ' + rg.diferenca + ')' + (ss.numero >= rg.melhor_de && rg.melhor_de > 1 ? ' · set decisivo' : '')) + '</p>' : '') +
+        '<div class="jv-placar">' + lado(d.a, d.status === 'encerrado' ? d.placar_a : ss.pa, d.placar_a, d.a && d.a.id) + '<div class="jv-x">×</div>' + lado(d.b, d.status === 'encerrado' ? d.placar_b : ss.pb, d.placar_b, d.b && d.b.id) + '</div>' +
+        (ss.fechados.length ? '<p class="ch-sub" style="text-align:center">Sets: ' + ss.fechados.map((x) => x.a + '–' + x.b).join(' · ') + '</p>' : '') +
+        (d.status === 'agendado' ? '<p class="ch-sub" style="text-align:center">' + (d.inicio_previsto ? 'Previsto para ' + dataHora(d.inicio_previsto) : 'Horário a definir') + '</p>' : '');
+    }
     return '<div class="jv-topo"><span class="ch-sub">' + esc(d.rodada_nome) + (d.local ? ' · ' + esc(d.local) : '') + '</span><span class="jv-status ' + d.status + '">' + (d.status === 'ao_vivo' ? '● ' : '') + ROTULO[d.status] + '</span></div>' +
       '<div class="jv-placar"><div class="jv-eq' + (d.vencedor_id && d.a && d.vencedor_id === d.a.id ? ' venceu' : '') + '"><span>' + nomeEq(d.a) + '</span><b>' + d.placar_a + '</b></div><div class="jv-x">×</div>' +
       '<div class="jv-eq' + (d.vencedor_id && d.b && d.vencedor_id === d.b.id ? ' venceu' : '') + '"><span>' + nomeEq(d.b) + '</span><b>' + d.placar_b + '</b></div></div>' +
@@ -206,7 +243,7 @@
         '<div class="jv-agenda"><input type="datetime-local" id="jv-inicio"><input id="jv-local" maxlength="120" placeholder="Quadra / campo"><button class="ch-btn suave" data-j="agendar">Salvar horário</button></div></div>';
     }
     if (d.status === 'ao_vivo') {
-      const empate = d.placar_a === d.placar_b;
+      const empate = d.placar_a === d.placar_b && !(d.regras_placar && d.regras_placar.modo === 'sets');
       return '<div class="jv-ctrl"><div class="jv-botoes"><div><b>' + nomeA + '</b><div><button class="ch-btn grande" data-j="marcar" data-lado="a" data-d="1">+1</button><button class="ch-btn suave" data-j="marcar" data-lado="a" data-d="-1">−1</button></div></div>' +
         '<div><b>' + nomeB + '</b><div><button class="ch-btn grande" data-j="marcar" data-lado="b" data-d="1">+1</button><button class="ch-btn suave" data-j="marcar" data-lado="b" data-d="-1">−1</button></div></div></div>' +
         '<div class="jv-agenda"><input id="jv-lance" maxlength="200" placeholder="Escreva um lance (ex.: cartão amarelo, pausa técnica)"><button class="ch-btn suave" data-j="lance">Publicar lance</button></div>' +
@@ -223,7 +260,7 @@
     const P = el.querySelector('#jv-placar'), C = el.querySelector('#jv-controles'), T = el.querySelector('#jv-tempo');
     let ultimo = '', chaveCtrl = '', temp = null, ocupado = false;
     const mostrar = (d) => {
-      const s = JSON.stringify(d.eventos) + d.placar_a + d.placar_b + d.status + d.vencedor_id + (d.a ? d.a.id : '') + (d.b ? d.b.id : '') + d.inicio_previsto + d.local;
+      const s = JSON.stringify(d.eventos) + JSON.stringify(d.sets) + d.placar_a + d.placar_b + d.status + d.vencedor_id + (d.a ? d.a.id : '') + (d.b ? d.b.id : '') + d.inicio_previsto + d.local;
       if (s !== ultimo) { ultimo = s; P.innerHTML = placarHtml(d); T.innerHTML = linhaDoTempo(d); if (o.aoCarregar) o.aoCarregar(d); }
       const k = [d.status, d.pode_pontuar, d.pode_gerir, d.placar_a === d.placar_b, d.a && d.a.id, d.b && d.b.id].join('|');
       if (k !== chaveCtrl) { chaveCtrl = k; C.innerHTML = controlesHtml(d); }
@@ -257,6 +294,19 @@
   }
 
   // ---------------------------------------------------------------- sorteio e mesários
+
+  function painelRegras(d) {
+    const r = d.regras_placar || { modo: 'simples', melhor_de: 3, pontos_set: 25, pontos_tiebreak: 15, diferenca: 2 };
+    const trava = d.placar_travado ? ' disabled' : '';
+    return '<div class="ch-painel"><h3>🏐 Regras de pontuação</h3><p class="ch-sub">' + (d.placar_travado ? 'Já há jogos começados: as regras não podem mais ser trocadas.' : 'Defina antes de iniciar os jogos. Em esportes com sets (vôlei, tênis…), o placar mostra os sets e os pontos de cada set.') + '</p>' +
+      '<div class="ch-campo ch-agenda"><label>Pontuação<select id="rg-modo"' + trava + '><option value="simples"' + (r.modo === 'simples' ? ' selected' : '') + '>Simples (gols/pontos corridos)</option><option value="sets"' + (r.modo === 'sets' ? ' selected' : '') + '>Por sets</option></select></label></div>' +
+      '<div class="ch-campo ch-agenda" id="rg-sets"' + (r.modo === 'sets' ? '' : ' hidden') + '>' +
+      '<label>Quantos sets (vence a maioria)<select id="rg-melhor"' + trava + '>' + [1, 3, 5, 7].map((n) => '<option value="' + n + '"' + (r.melhor_de === n ? ' selected' : '') + '>Melhor de ' + n + (n > 1 ? ' (vence com ' + (Math.floor(n / 2) + 1) + ')' : '') + '</option>').join('') + '</select></label>' +
+      '<label>Pontos por set<input type="number" id="rg-pontos" min="1" max="99" value="' + r.pontos_set + '"' + trava + '></label>' +
+      '<label>Pontos do set decisivo (tiebreak)<input type="number" id="rg-tie" min="1" max="99" value="' + r.pontos_tiebreak + '"' + trava + '></label>' +
+      '<label>Diferença mínima para fechar o set<input type="number" id="rg-dif" min="1" max="5" value="' + r.diferenca + '"' + trava + '></label></div>' +
+      '<button class="ch-btn" id="bt-regras"' + trava + '>Salvar regras</button></div>';
+  }
 
   function painelHorarios(d) {
     const escopos = d.formato === 'grupos'
@@ -295,7 +345,7 @@
           '<div class="ch-cabecas">' + d.equipes.map((e) => '<label class="ch-cab"><input type="number" min="1" max="' + d.equipes.length + '" data-cabeca="' + e.id + '" placeholder="–"> ' + esc(e.nome) + '</label>').join('') + '</div></div>' +
           '<button class="ch-btn grande" id="bt-sortear" ' + (d.equipes_confirmadas < 2 ? 'disabled' : '') + '>' + (jaTem ? '🔁 Sortear de novo' : '🎲 Sortear agora') + '</button>' : '') +
         '<p class="ch-sub">O sorteio é aleatório (fora os cabeças de chave), fica registrado e as equipes são avisadas.</p></div>' +
-        (jaTem ? painelHorarios(d) : '') +
+        painelRegras(d) + (jaTem ? painelHorarios(d) : '') +
         '<div class="ch-painel"><h3>📋 Mesários</h3><p class="ch-sub">Pessoas autorizadas a iniciar jogos, marcar o placar e encerrar. Todos os demais só acompanham.</p>' +
         '<div id="mesarios">' + (d.mesarios.length ? d.mesarios.map((m) => '<span class="ch-chip">' + esc(m.arroba) + ' <button data-rm="' + m.usuario_id + '" title="Remover">×</button></span>').join('') : '<span class="ch-sub">Nenhum mesário além de você.</span>') + '</div>' +
         '<div class="ch-campo" style="display:flex;gap:6px"><input id="bt-mes" list="dl-mes" placeholder="@usuario" autocomplete="off"><datalist id="dl-mes"></datalist><button class="ch-btn suave" id="bt-add">Adicionar</button></div></div>';
@@ -320,6 +370,18 @@
           if (o.aoSortear) o.aoSortear(); else desenhar(await get('/campeonatos/' + id + '/chaves'));
         } catch (e) { if (toast) toast(e.message); bt.disabled = false; }
       };
+      const rgModo = el.querySelector('#rg-modo');
+      if (rgModo) {
+        rgModo.onchange = () => { el.querySelector('#rg-sets').hidden = rgModo.value !== 'sets'; };
+        el.querySelector('#bt-regras').onclick = async () => {
+          const v = (i) => Number(el.querySelector('#' + i).value);
+          try {
+            await post('/campeonatos/' + id + '/placar-regras', { modo: rgModo.value, melhor_de: v('rg-melhor'), pontos_set: v('rg-pontos'), pontos_tiebreak: v('rg-tie'), diferenca: v('rg-dif') });
+            if (toast) toast('Regras de pontuação salvas.');
+            desenhar(await get('/campeonatos/' + id + '/chaves'));
+          } catch (e) { if (toast) toast(e.message); }
+        };
+      }
       const ag = el.querySelector('#bt-agenda');
       if (ag) ag.onclick = async () => {
         const v = (i) => el.querySelector('#' + i).value;

@@ -370,6 +370,92 @@ def test_agenda_em_lote_dos_grupos_e_depois_do_mata_mata(s, fabrica):
     assert r["agendados"] == 1
 
 
+def test_volei_nasce_com_pontuacao_por_sets_e_o_resto_com_placar_simples(s, fabrica):
+    org = fabrica.atleta("Org")
+    hoje = agora().date()
+    campo = lambda mod: campeonatos.criar(s, org, NovoCampeonato(modalidade_id=fabrica.mod(mod).id, nome=f"Copa {mod}", data_inicio=hoje + timedelta(days=20), inscricao_ate=hoje + timedelta(days=10), max_equipes=8, local_nome="G", latitude=PERTO[0], longitude=PERTO[1]))  # noqa: E731
+    v, f = campo("volei"), campo("futsal")
+    assert (v.placar_modo, v.sets_melhor_de, v.pontos_set, v.pontos_tiebreak, v.diferenca_set) == ("sets", 3, 25, 15, 2)
+    assert chaves.regras_placar(v)["sets_para_vencer"] == 2 and chaves.regras_placar(f)["modo"] == "simples"
+    areia = campo("volei_de_areia")
+    assert (areia.pontos_set, areia.pontos_tiebreak) == (21, 15)
+
+
+def test_jogo_por_sets_fecha_cada_set_e_o_jogo_so_encerra_decidido(s, fabrica):
+    c, org, _ = _torneio(s, fabrica, 2)
+    with pytest.raises(SemPermissao):
+        chaves.configurar_placar(s, c.id, fabrica.atleta("Intruso"), "sets")
+    with pytest.raises(ErroNegocio, match="1, 3, 5 ou 7"):
+        chaves.configurar_placar(s, c.id, org, "sets", melhor_de=4)
+    r = chaves.configurar_placar(s, c.id, org, "sets", melhor_de=3, pontos_set=3, pontos_tiebreak=2, diferenca=1)
+    assert r["sets_para_vencer"] == 2 and r["pontos_set"] == 3
+    chaves.sortear(s, c.id, org, "eliminatoria")
+    j = _jogos(s, c)[0]
+    chaves.iniciar(s, c.id, j.id, org)
+    with pytest.raises(ErroNegocio, match="por sets"):
+        chaves.definir_placar(s, c.id, j.id, org, 1, 0)
+    with pytest.raises(ErroNegocio, match="ainda não terminou"):
+        chaves.encerrar(s, c.id, j.id, org)
+    for _ in range(3):
+        chaves.marcar(s, c.id, j.id, org, "a", 1)  # set 1 para A (3 pontos)
+    assert (j.placar_a, j.placar_b) == (1, 0)
+    for _ in range(3):
+        chaves.marcar(s, c.id, j.id, org, "b", 1)  # set 2 para B
+    assert (j.placar_a, j.placar_b) == (1, 1)
+    chaves.marcar(s, c.id, j.id, org, "a", 1)
+    chaves.marcar(s, c.id, j.id, org, "a", 1)  # set 3 é o decisivo: vai só a 2
+    assert (j.placar_a, j.placar_b) == (2, 1)
+    with pytest.raises(ErroNegocio, match="já está decidido"):
+        chaves.marcar(s, c.id, j.id, org, "b", 1)
+    # corrigir com −1 reabre o set decisivo
+    chaves.marcar(s, c.id, j.id, org, "a", -1)
+    assert (j.placar_a, j.placar_b) == (1, 1)
+    with pytest.raises(ErroNegocio, match="ainda não terminou"):
+        chaves.encerrar(s, c.id, j.id, org)
+    chaves.marcar(s, c.id, j.id, org, "a", 1)
+    j = chaves.encerrar(s, c.id, j.id, org)
+    assert j.vencedor_id == j.equipe_a_id and j.desempate is False
+    d = chaves.detalhe_jogo(s, c, j.id, org)
+    assert [(x["a"], x["b"], x["encerrado"]) for x in d["sets"]] == [(3, 0, True), (0, 3, True), (2, 0, True)]
+    assert d["regras_placar"]["modo"] == "sets" and "(3-0, 0-3, 2-0)" in d["eventos"][-1]["texto"]
+    with pytest.raises(ErroNegocio, match="já há jogos|Já há jogos"):
+        chaves.configurar_placar(s, c.id, org, "simples")  # depois de começar não troca
+
+
+def test_lancar_sets_de_uma_vez_valida_cada_set(s, fabrica):
+    c, org, _ = _torneio(s, fabrica, 2)
+    chaves.configurar_placar(s, c.id, org, "sets", melhor_de=3, pontos_set=25, pontos_tiebreak=15, diferenca=2)
+    chaves.sortear(s, c.id, org, "pontos_corridos")
+    j = _jogos(s, c)[0]
+    chaves.iniciar(s, c.id, j.id, org)
+    for ruim, msg in (([[25, 24]], "não termina assim"), ([[25, 20]], "não decide"), ([[25, 20], [25, 10], [25, 5]], "já estava decidido"), ([[25, 20], [20, 25], [14, 10]], "não termina assim")):
+        with pytest.raises(ErroNegocio, match=msg):
+            chaves.definir_sets(s, c.id, j.id, org, ruim)
+    chaves.definir_sets(s, c.id, j.id, org, [[25, 20], [20, 25], [16, 14]])  # decisivo vai a 15 com 2 de diferença
+    assert (j.placar_a, j.placar_b) == (2, 1)
+    chaves.encerrar(s, c.id, j.id, org)
+    assert j.vencedor_id == j.equipe_a_id
+
+
+def test_classificacao_por_sets_pontua_3_2_1_0(s, fabrica):
+    c, org, _ = _torneio(s, fabrica, 3)
+    chaves.configurar_placar(s, c.id, org, "sets", melhor_de=3, pontos_set=25, pontos_tiebreak=15, diferenca=2)
+    chaves.sortear(s, c.id, org, "pontos_corridos")
+    j1, j2, j3 = _jogos(s, c)
+    for j, sets in ((j1, [[25, 10], [25, 12]]), (j2, [[25, 20], [20, 25], [15, 10]]), (j3, [[10, 25], [10, 25]])):
+        chaves.iniciar(s, c.id, j.id, org)
+        chaves.definir_sets(s, c.id, j.id, org, sets)
+        chaves.encerrar(s, c.id, j.id, org)
+    tab = chaves.chaveamento(s, c, org)["classificacao"]
+    # 2×0 = 3 a 0; 2×1 = 2 para quem ganha e 1 para quem perde no set decisivo
+    esperado: dict[int, int] = {}
+    for j, (pa, pb) in ((j1, (3, 0)), (j2, (2, 1)), (j3, (0, 3))):
+        esperado[j.equipe_a_id] = esperado.get(j.equipe_a_id, 0) + pa
+        esperado[j.equipe_b_id] = esperado.get(j.equipe_b_id, 0) + pb
+    assert {L["equipe"]["id"]: L["pontos"] for L in tab} == esperado
+    assert all("pts_saldo" in L for L in tab) and [L["posicao"] for L in tab] == [1, 2, 3]
+
+
 def test_api_todos_acompanham_e_so_a_organizacao_conduz(banco):
     """Só pela API/site (sem a sessão de teste aberta): o startup do app altera tabelas e travaria com ela."""
     from playgo.web.app import app

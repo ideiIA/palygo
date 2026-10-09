@@ -43,6 +43,18 @@ class AgendarIn(BaseModel):
     local: str | None = None
 
 
+class RegrasPlacarIn(BaseModel):
+    modo: str  # simples | sets
+    melhor_de: int = 3
+    pontos_set: int = 25
+    pontos_tiebreak: int = 15
+    diferenca: int = 2
+
+
+class SetsIn(BaseModel):
+    sets: list[list[int]]  # [[25,20],[18,25],[15,12]]
+
+
 class AgendaLoteIn(BaseModel):
     escopo: str = "todos"  # todos | grupos | mata_mata | rodada:N
     inicio: datetime
@@ -66,6 +78,18 @@ def ver_chaves(campeonato_id: int, u: AtualApi, s: Sessao):
 def sortear(campeonato_id: int, corpo: SorteioIn, u: AtualApi, s: Sessao):
     chaves.sortear(s, campeonato_id, u, corpo.formato, corpo.grupos, corpo.classificam, corpo.cabecas)
     return chaves.chaveamento(s, campeonatos.obter(s, campeonato_id), u)
+
+
+@router.post("/{campeonato_id}/placar-regras")
+def regras_do_placar(campeonato_id: int, corpo: RegrasPlacarIn, u: AtualApi, s: Sessao):
+    chaves.configurar_placar(s, campeonato_id, u, corpo.modo, corpo.melhor_de, corpo.pontos_set, corpo.pontos_tiebreak, corpo.diferenca)
+    return chaves.chaveamento(s, campeonatos.obter(s, campeonato_id), u)
+
+
+@router.post("/{campeonato_id}/jogos/{jogo_id}/sets")
+def lancar_sets(campeonato_id: int, jogo_id: int, corpo: SetsIn, u: AtualApi, s: Sessao):
+    chaves.definir_sets(s, campeonato_id, jogo_id, u, corpo.sets)
+    return _devolver(campeonato_id, jogo_id, u, s)
 
 
 @router.post("/{campeonato_id}/agenda")

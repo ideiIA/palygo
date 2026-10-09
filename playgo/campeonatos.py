@@ -33,6 +33,16 @@ from .models import (
 
 ATIVAS_EQUIPE = (E_PENDENTE, E_CONFIRMADA)
 
+# Esportes que se jogam em sets: código da modalidade → (melhor de, pontos do set, pontos do set decisivo). A organização pode mudar.
+PLACAR_POR_SETS = {
+    "volei": (3, 25, 15),
+    "volei_de_areia": (3, 21, 15),
+    "futevolei": (3, 18, 15),
+    "beach_tennis": (3, 6, 10),
+    "tenis": (3, 6, 10),
+    "padel": (3, 6, 10),
+}
+
 
 @dataclass
 class NovoCampeonato:
@@ -77,7 +87,8 @@ def equipes_ativas(s: SessaoORM, c: Campeonato) -> int:
 
 
 def criar(s: SessaoORM, usuario: Usuario, d: NovoCampeonato) -> Campeonato:
-    if s.get(Modalidade, d.modalidade_id) is None:
+    modalidade = s.get(Modalidade, d.modalidade_id)
+    if modalidade is None:
         raise ErroNegocio("Escolha a modalidade.")
     if not d.nome.strip():
         raise ErroNegocio("Dê um nome ao campeonato.")
@@ -108,6 +119,10 @@ def criar(s: SessaoORM, usuario: Usuario, d: NovoCampeonato) -> Campeonato:
         data_inicio=d.data_inicio, data_fim=d.data_fim, inscricao_ate=d.inscricao_ate, max_equipes=d.max_equipes,
         atletas_por_equipe=d.atletas_por_equipe, valor_inscricao=d.valor_inscricao,
     )
+    if modalidade.codigo in PLACAR_POR_SETS:
+        c.placar_modo = "sets"
+        c.sets_melhor_de, c.pontos_set, c.pontos_tiebreak = PLACAR_POR_SETS[modalidade.codigo]
+        c.diferenca_set = 2
     s.add(c)
     s.flush()
     _avisar_proximos(s, c)

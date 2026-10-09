@@ -418,6 +418,12 @@ class Campeonato(Base):
     grupos_qtd: Mapped[int | None] = mapped_column(Integer)  # formato "grupos": quantos grupos
     classificam: Mapped[int | None] = mapped_column(Integer)  # formato "grupos": quantas equipes de cada grupo vão ao mata-mata
     duracao_jogo_min: Mapped[int | None] = mapped_column(Integer)  # última duração usada na agenda em lote (preenche o formulário)
+    # Regras de pontuação: "simples" (gols/pontos corridos) ou "sets" (vôlei, tênis…). Nulo = simples.
+    placar_modo: Mapped[str | None] = mapped_column(String(8))
+    sets_melhor_de: Mapped[int | None] = mapped_column(Integer)  # 3 = melhor de 3 (vence com 2 sets)
+    pontos_set: Mapped[int | None] = mapped_column(Integer)  # pontos para ganhar um set
+    pontos_tiebreak: Mapped[int | None] = mapped_column(Integer)  # pontos do set decisivo (tiebreak)
+    diferenca_set: Mapped[int | None] = mapped_column(Integer)  # vantagem mínima para fechar o set
 
     modalidade: Mapped[Modalidade] = relationship(lazy="joined")
     organizador: Mapped[Usuario] = relationship(lazy="joined")
@@ -489,6 +495,21 @@ class Jogo(Base):
     equipe_a: Mapped[Equipe | None] = relationship(foreign_keys=[equipe_a_id], lazy="joined")
     equipe_b: Mapped[Equipe | None] = relationship(foreign_keys=[equipe_b_id], lazy="joined")
     eventos: Mapped[list["JogoEvento"]] = relationship(cascade="all, delete-orphan", order_by="JogoEvento.id")
+    sets: Mapped[list["JogoSet"]] = relationship(cascade="all, delete-orphan", order_by="JogoSet.numero")
+
+
+class JogoSet(Base):
+    """Placar de cada set (campeonatos com `placar_modo = "sets"`). `Jogo.placar_a/b` guarda quantos sets cada lado ganhou."""
+
+    __tablename__ = "jogo_sets"
+    __table_args__ = (UniqueConstraint("jogo_id", "numero"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    jogo_id: Mapped[int] = mapped_column(ForeignKey("jogos.id", ondelete="CASCADE"), index=True)
+    numero: Mapped[int] = mapped_column(Integer)
+    pontos_a: Mapped[int] = mapped_column(Integer, default=0)
+    pontos_b: Mapped[int] = mapped_column(Integer, default=0)
+    encerrado: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class JogoEvento(Base):

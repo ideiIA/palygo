@@ -124,3 +124,10 @@
 .av-x { align-self: center; font-size: 22px; color: var(--muted, #667085); }
 .ch-av.vivo .av-fim { background: transparent; border: 0; padding: 0; }
 @media (max-width: 520px) { .av-pl { font-size: 38px; } .av-nome { font-size: 14px; } .av-bt .ch-btn { min-width: 52px; padding: 8px 10px; } }
+
+/* pontuação por sets */
+.ch-sets { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--muted, #667085); margin-top: 2px; }
+.ch-sets .atual { color: #e5252f; font-weight: 800; }
+.av-sub { font-size: 13px; color: var(--muted, #667085); }
+.av-setinfo { text-align: center; font-weight: 700; font-size: 13px; margin: 0 0 8px; }
+.jv-eq small { font-size: 13px; font-weight: 600; opacity: .75; }
