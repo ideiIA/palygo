@@ -183,7 +183,7 @@
     const google = prov.google ? `<a class="btn suave bloco" href="/auth/google/iniciar?destino=app" style="margin-bottom:10px">Continuar com Google</a><p class="suave" style="text-align:center;margin:0 0 12px">ou ${cad ? 'crie a conta' : 'use seu e-mail'}</p>` : '';
     const dec = (T && T.declaracoes) || { localizacao: 'Autorizo guardar a localização do meu perfil (opcional).' };
     montar(`<div class="entrada"><form class="cartao" id="f-entrar">
-      <span class="marca">Play<span>Go</span></span>
+      <span class="marca"><img src="/static/marca/icone.svg" alt="" width="40" height="40" class="marca-ico">Play<span>Go</span></span>
       <h1>${cad ? 'Crie sua conta' : 'Entrar'}</h1>
       <p class="suave" style="margin:6px 0 16px">Encontre onde jogar. Encontre com quem jogar.</p>
       <div id="erro">${falhouGoogle ? '<p class="aviso erro">Não foi possível entrar com o Google. Tente de novo.</p>' : ''}</div>
@@ -964,7 +964,7 @@
 
   async function vAceite() {
     const T = await fetch(API + '/termos').then((r) => r.json()).catch(() => null);
-    montar(`<div class="entrada"><form class="cartao" id="f-aceite"><span class="marca">Play<span>Go</span></span>
+    montar(`<div class="entrada"><form class="cartao" id="f-aceite"><span class="marca"><img src="/static/marca/icone.svg" alt="" width="40" height="40" class="marca-ico">Play<span>Go</span></span>
       <h1>Atualizamos nossos termos</h1>
       <p class="suave" style="margin:6px 0 12px">A versão <b>${esc(T ? T.versao : '')}</b> dos Termos de Uso e da Política de Privacidade traz regras de publicação, moderação e proteção de dados. Para continuar, leia e aceite.</p>
       <p style="margin-bottom:12px"><a href="#/documento/termos">Ler os Termos de Uso</a> · <a href="#/documento/politica">Ler a Política de Privacidade</a></p><div id="erro"></div>
@@ -980,7 +980,7 @@
   }
 
   function vCompletar() {
-    montar(`<div class="entrada"><form class="cartao" id="f-usuario"><span class="marca">Play<span>Go</span></span>
+    montar(`<div class="entrada"><form class="cartao" id="f-usuario"><span class="marca"><img src="/static/marca/icone.svg" alt="" width="40" height="40" class="marca-ico">Play<span>Go</span></span>
       <h1>Escolha seu nome de usuário</h1>
       <p class="suave" style="margin:6px 0 12px">Ele aparece nas suas publicações e comentários, e é como as pessoas vão te encontrar para convites. Seu nome real não aparece nas publicações.</p><div id="erro"></div>
       <div class="campo"><input name="usuario" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_.@]{3,21}" placeholder="ex.: carlos.cg" autocomplete="username"></div>

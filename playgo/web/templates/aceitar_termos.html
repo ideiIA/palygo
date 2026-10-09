@@ -5,11 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Aceite dos termos · PlayGo</title>
   <meta name="theme-color" content="#6c4cff">
+  <link rel="icon" href="/static/marca/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/marca/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/static/marca/apple-touch-icon.png">
+  <meta property="og:title" content="PlayGo — encontre onde jogar, encontre com quem jogar">
+  <meta property="og:description" content="Atividades, campeonatos com chaves e placar ao vivo, arenas e comunidades para quem pratica esporte.">
+  <meta property="og:image" content="/static/marca/og-playgo.png">
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body class="entrada">
   <form class="cartao-entrada" method="post" action="/termos/aceitar">
-    <a class="logo" href="/">Play<span style="color:var(--purple)">Go</span></a>
+    <a class="logo" href="/"><img class="logo-ico" src="/static/marca/icone.svg" alt="" width="40" height="40">Play<span style="color:var(--purple)">Go</span></a>
     <h1>Atualizamos nossos termos</h1>
     <p class="suave" style="margin:0">Olá, {{ usuario.nome }}! A versão <b>{{ versao }}</b> dos Termos de Uso e da Política de Privacidade traz regras de publicação, moderação e proteção de dados. Para continuar, leia e aceite.</p>
     {% if erro %}<p class="aviso erro" style="margin:0">{{ erro }}</p>{% endif %}

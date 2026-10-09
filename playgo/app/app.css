@@ -15,6 +15,7 @@ h1, h2, h3, p { margin: 0; }
 #topo { position: sticky; top: 0; z-index: 20; height: calc(var(--topo) + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .marca { font-size: 24px; font-weight: 900; letter-spacing: -1px; color: var(--ink); }
 .marca span { color: var(--purple); }
+.marca-ico { vertical-align: -7px; margin-right: 6px; border-radius: 7px; }
 .topo-acoes { display: flex; gap: 6px; align-items: center; }
 .icone { background: none; border: 0; font-size: 20px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; position: relative; cursor: pointer; }
 .icone:active { background: #f0edff; }

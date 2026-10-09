@@ -102,3 +102,7 @@ O app tem as mesmas funções em abas, mais Criar jogo / atividade / grupo / cam
 - Login simples: sem recuperação de senha por e-mail nem bloqueio por tentativas.
 - O mapa carrega Leaflet e os blocos do OpenStreetMap pela internet; offline a lista continua funcionando.
 - Fotos de perfil, arena e grupo guardam só uma URL; upload existe só nas publicações do mural.
+
+## Marca
+
+O ícone (bola de futebol em movimento com as linhas de velocidade em lima, sobre o degradê roxo→rosa), o logo horizontal, o favicon e a imagem de compartilhamento são gerados por `scripts/gerar_marca.py` (substitui o antigo `gerar_icones.py`). Saída em `playgo/web/static/marca/` e `playgo/app/icon-*.png`. Cores: roxo `#6c4cff`, rosa `#ff3d81`, lima `#b7f34b`, azul-noite `#14213d`.

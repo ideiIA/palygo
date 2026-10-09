@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}PlayGo — Esporte perto de você{% endblock %}</title>
   <meta name="theme-color" content="#6c4cff">
+  <link rel="icon" href="/static/marca/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/marca/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/static/marca/apple-touch-icon.png">
+  <meta property="og:title" content="PlayGo — encontre onde jogar, encontre com quem jogar">
+  <meta property="og:description" content="Atividades, campeonatos com chaves e placar ao vivo, arenas e comunidades para quem pratica esporte.">
+  <meta property="og:image" content="/static/marca/og-playgo.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/mural.css">
@@ -30,7 +36,7 @@
 <body>
 <div class="app">
 <aside class="sidebar">
-  <a class="logo" href="/">Play<span>Go</span></a>
+  <a class="logo" href="/"><img class="logo-ico" src="/static/marca/icone.svg" alt="" width="34" height="34">Play<span>Go</span></a>
   <nav class="nav">
     {% for chave, url, icone, nome in itens_do_menu %}
     <a href="{{ url }}" class="{{ 'active' if aba == chave }}"><span class="ico">{{ icone }}</span><span class="t">{{ nome }}</span></a>

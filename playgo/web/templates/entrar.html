@@ -5,11 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ 'Criar conta' if modo == 'cadastro' else 'Entrar' }} · PlayGo</title>
   <meta name="theme-color" content="#6c4cff">
+  <link rel="icon" href="/static/marca/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/marca/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/static/marca/apple-touch-icon.png">
+  <meta property="og:title" content="PlayGo — encontre onde jogar, encontre com quem jogar">
+  <meta property="og:description" content="Atividades, campeonatos com chaves e placar ao vivo, arenas e comunidades para quem pratica esporte.">
+  <meta property="og:image" content="/static/marca/og-playgo.png">
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body class="entrada">
   <form class="cartao-entrada" method="post" action="{{ '/cadastro' if modo == 'cadastro' else '/entrar' }}">
-    <a class="logo" href="/">Play<span style="color:var(--purple)">Go</span></a>
+    <a class="logo" href="/"><img class="logo-ico" src="/static/marca/icone.svg" alt="" width="40" height="40">Play<span style="color:var(--purple)">Go</span></a>
     {% if modo == 'cadastro' %}
     <h1>Crie sua conta</h1>
     <p class="suave" style="margin:0">Encontre onde jogar. Encontre com quem jogar.</p>

@@ -56,7 +56,7 @@ ORM alternativo ou framework de front sem pedido explícito.
 .venv\Scripts\python -m playgo demo --refazer   # apaga e recria os dados de demonstração
 .venv\Scripts\python -m playgo web              # http://localhost:8010  (site /, app /app/, API /api/v1)
 .venv\Scripts\python -m pytest tests
-.venv\Scripts\python scripts\gerar_icones.py    # regenera os ícones PNG do PWA
+.venv\Scripts\python scripts\gerar_marca.py      # regenera logo, favicon e ícones do app (marca/)
 .venv\Scripts\python -m playgo purgar         # elimina registros/publicações excluídas além do prazo de guarda
 ```
 
