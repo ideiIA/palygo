@@ -106,26 +106,36 @@
         '<button class="ch-btn suave" data-av="resultado" data-j="' + j.id + '">Lançar e encerrar</button></div></details></div>';
     }
     if (j.status === 'ao_vivo') {
-      const lado = (eq, l) => '<div class="av-lado"><b>' + esc(eq.nome) + '</b><div><button class="ch-btn grande" data-av="marcar" data-j="' + j.id + '" data-lado="' + l + '" data-d="1">+1</button><button class="ch-btn suave" data-av="marcar" data-j="' + j.id + '" data-lado="' + l + '" data-d="-1">−1</button></div></div>';
-      return '<div class="ch-ctl"><div class="av-lados">' + lado(j.a, 'a') + lado(j.b, 'b') + '</div>' + desempate +
-        '<button class="ch-btn perigo" data-av="encerrar" data-j="' + j.id + '">🏁 Encerrar jogo</button> <a class="ch-link" href="' + esc(o_href(j)) + '">abrir jogo (lances)</a></div>';
+      return '<div class="ch-ctl av-fim">' + desempate + '<button class="ch-btn perigo" data-av="encerrar" data-j="' + j.id + '">🏁 Encerrar jogo</button></div>';
     }
     return d.pode_gerir ? '<div class="ch-ctl"><button class="ch-btn suave" data-av="reabrir" data-j="' + j.id + '">Reabrir para corrigir</button></div>' : '';
   }
   let o_href = (j) => '#';
+
+  // Jogo ao vivo: um embaixo do outro, com as duas equipes lado a lado (nome, placar e marcações de cada uma)
+  function quadroVivo(j, d) {
+    const time = (eq, l) => {
+      const pl = l === 'a' ? j.placar_a : j.placar_b;
+      const bt = d.pode_pontuar ? '<div class="av-bt"><button class="ch-btn grande" data-av="marcar" data-j="' + j.id + '" data-lado="' + l + '" data-d="1">+1</button><button class="ch-btn suave" data-av="marcar" data-j="' + j.id + '" data-lado="' + l + '" data-d="-1">−1</button></div>' : '';
+      return '<div class="av-time"><div class="av-nome">' + esc(eq.nome) + '</div><div class="av-pl">' + pl + '</div>' + bt + '</div>';
+    };
+    return '<div class="av-quadro"><div class="av-topo"><span class="ch-vivo">● AO VIVO</span><span class="ch-sub">' + esc([j.rodada_nome, j.local].filter(Boolean).join(' · ')) + '</span>' +
+      '<a class="ch-link" href="' + esc(o_href(j)) + '">lance a lance →</a></div><div class="av-times">' + time(j.a, 'a') + '<div class="av-x">×</div>' + time(j.b, 'b') + '</div></div>';
+  }
 
   function montarAoVivo(el, o) {
     const { get, post, href, id, toast } = o;
     o_href = href;
     let ultimo = '', ultimoD = null;
     const bloco = (t, js, vazio, d) => '<h3 class="ch-tit">' + t + '</h3>' + (js.length ? '<div class="ch-grade' + (d.pode_pontuar ? ' av' : '') + '">' + js.map((j) => '<div class="ch-av" data-jogo="' + j.id + '">' + cartao(j, href) + controlesLista(j, d) + '</div>').join('') + '</div>' : '<p class="ch-sub">' + vazio + '</p>');
+    const blocoVivo = (js, d) => '<h3 class="ch-tit">🔴 Ao vivo agora</h3>' + (js.length ? '<div class="av-vivos">' + js.map((j) => '<div class="ch-av vivo" data-jogo="' + j.id + '">' + quadroVivo(j, d) + controlesLista(j, d) + '</div>').join('') + '</div>' : '<p class="ch-sub">Nenhum jogo ao vivo neste momento.</p>');
     const desenhar = (d) => {
       const todos = todosJogos(d);
       const prox = todos.filter((j) => j.status === 'agendado' && j.a && j.b).sort((x, y) => (x.inicio_previsto || '9').localeCompare(y.inicio_previsto || '9'));
       const fim = todos.filter((j) => j.status === 'encerrado' && !j.folga).reverse().slice(0, 8);
       el.innerHTML = (d.pode_pontuar ? '<p class="ch-aviso">Você conduz este campeonato: inicie jogos, lance o placar e encerre direto daqui.</p>' : '') +
         (d.campeao ? '<div class="ch-campeao">🏆 Campeão: <b>' + esc(d.campeao.nome) + '</b></div>' : '') +
-        bloco('🔴 Ao vivo agora', d.ao_vivo, 'Nenhum jogo ao vivo neste momento.', d) + bloco('Próximos jogos', prox.slice(0, d.pode_pontuar ? 16 : 8), 'Sem jogos agendados.', d) + bloco('Últimos resultados', fim, 'Ainda não há resultados.', d);
+        blocoVivo(d.ao_vivo, d) + bloco('Próximos jogos', prox.slice(0, d.pode_pontuar ? 16 : 8), 'Sem jogos agendados.', d) + bloco('Últimos resultados', fim, 'Ainda não há resultados.', d);
     };
     // não troca a tela enquanto alguém digita um placar
     const digitando = () => ['INPUT', 'SELECT'].includes((document.activeElement || {}).tagName) && el.contains(document.activeElement);
