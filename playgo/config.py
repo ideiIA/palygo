@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     pasta_uploads: Path = RAIZ / "uploads"
     max_foto_mb: int = 10
     max_video_mb: int = 50
+    max_pdf_mb: int = 15  # regulamento em PDF
     max_midias_post: int = 4
     max_texto_post: int = 2000
     janela_exclusao_min: int = 60  # o autor só exclui na primeira hora; depois, só moderador/admin oculta
@@ -93,6 +94,10 @@ class Settings(BaseSettings):
     @property
     def limite_foto_mb(self) -> int:
         return min(self.max_foto_mb, 4) if self.em_serverless else self.max_foto_mb
+
+    @property
+    def limite_pdf_mb(self) -> int:
+        return min(self.max_pdf_mb, 4) if self.em_serverless else self.max_pdf_mb
 
     @property
     def limite_video_mb(self) -> int:

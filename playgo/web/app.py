@@ -104,7 +104,7 @@ def _plano_necessario(request: Request, erro: PlanoNecessario):
 @app.exception_handler(ErroNegocio)
 def _erro_de_negocio(request: Request, erro: ErroNegocio):
     codigo = 404 if isinstance(erro, NaoEncontrado) else 403 if isinstance(erro, SemPermissao) else 400
-    if request.url.path.startswith(("/api/", "/midia/", "/foto/")):
+    if request.url.path.startswith(("/api/", "/midia/", "/foto/")) or request.url.path.endswith("/regulamento.pdf"):
         return JSONResponse({"detail": str(erro)}, status_code=codigo)
     # No site, a mensagem vai para a página de onde a pessoa veio
     request.session["erro"] = str(erro)

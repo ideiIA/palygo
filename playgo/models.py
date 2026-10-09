@@ -420,6 +420,10 @@ class Campeonato(Base):
     duracao_jogo_min: Mapped[int | None] = mapped_column(Integer)  # última duração usada na agenda em lote (preenche o formulário)
     # A organização libera o cadastro do elenco (nome e RG dos componentes e o técnico, com o capitão marcado) por equipe
     cadastro_elenco: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Regulamento em PDF (definido em reuniões): arquivo no armazenamento, nome original e quando foi enviado
+    regulamento_arquivo: Mapped[str | None] = mapped_column(String(120))
+    regulamento_nome: Mapped[str | None] = mapped_column(String(150))
+    regulamento_em: Mapped[datetime | None] = mapped_column(DateTime)
     # Regras de pontuação: "simples" (gols/pontos corridos) ou "sets" (vôlei, tênis…). Nulo = simples.
     placar_modo: Mapped[str | None] = mapped_column(String(8))
     sets_melhor_de: Mapped[int | None] = mapped_column(Integer)  # 3 = melhor de 3 (vence com 2 sets)

@@ -35,7 +35,10 @@
     <b>{{ k.equipes }}/{{ k.max_equipes }} equipes inscritas — {{ k.vagas }} vaga{{ 's' if k.vagas != 1 }}</b>
     <div class="barra"><i style="width:{{ (100 * k.equipes / k.max_equipes)|round|int }}%"></i></div>
     {% if k.descricao %}<h3 style="margin-top:18px">Sobre</h3><p>{{ k.descricao }}</p>{% endif %}
-    {% if k.regulamento %}<h3 style="margin-top:14px">Regulamento</h3><p style="white-space:pre-line">{{ k.regulamento }}</p>{% endif %}
+    {% if k.regulamento_pdf %}<h3 style="margin-top:14px">Regulamento</h3>
+    <p><a class="btn purple" href="{{ k.regulamento_pdf.url }}" target="_blank" rel="noopener">📄 Abrir o regulamento em PDF</a>
+      <span class="suave">{{ k.regulamento_pdf.nome }} · atualizado em {{ k.regulamento_pdf.em[8:10] }}/{{ k.regulamento_pdf.em[5:7] }}/{{ k.regulamento_pdf.em[0:4] }}</span></p>{% endif %}
+    {% if k.regulamento %}<h3 style="margin-top:14px">{{ 'Resumo do regulamento' if k.regulamento_pdf else 'Regulamento' }}</h3><p style="white-space:pre-line">{{ k.regulamento }}</p>{% endif %}
 
     {% if k.inscricoes_abertas %}
     {% if ms.equipes %}<p class="suave" style="margin-top:18px">Você está em: {% for e in ms.equipes %}<b>{{ e.nome }}</b>{{ ', ' if not loop.last }}{% endfor %}. Dá para inscrever outra equipe.</p>{% endif %}

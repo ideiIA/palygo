@@ -3,10 +3,11 @@
 from datetime import date
 from decimal import Decimal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, File, UploadFile
 from pydantic import BaseModel
 
 from .. import campeonatos, detalhes, elenco
+from ..config import settings
 from ..deps import AtualApi, Sessao
 
 router = APIRouter(prefix="/api/v1")
@@ -45,6 +46,21 @@ def editar_campeonato(campeonato_id: int, corpo: CampeonatoEdicaoIn, u: AtualApi
     obrigatorios = ("nome", "data_inicio", "inscricao_ate", "max_equipes", "atletas_por_equipe", "valor_inscricao", "cadastro_elenco", "local_nome")
     campos = {k: v for k, v in campos.items() if v is not None or k not in obrigatorios}
     c = campeonatos.editar(s, campeonato_id, u, **campos)
+    return detalhes.campeonato(s, c, u)
+
+
+@router.post("/campeonatos/{campeonato_id}/regulamento")
+def enviar_regulamento(campeonato_id: int, u: AtualApi, s: Sessao, arquivo: UploadFile = File()):
+    """multipart/form-data, campo `arquivo`: o PDF do regulamento."""
+    limite = settings.limite_pdf_mb * 1024 * 1024
+    dados = arquivo.file.read(limite + 1)
+    c = campeonatos.anexar_regulamento(s, campeonato_id, u, dados, arquivo.filename)
+    return detalhes.campeonato(s, c, u)
+
+
+@router.delete("/campeonatos/{campeonato_id}/regulamento")
+def apagar_regulamento(campeonato_id: int, u: AtualApi, s: Sessao):
+    c = campeonatos.remover_regulamento(s, campeonato_id, u)
     return detalhes.campeonato(s, c, u)
 
 

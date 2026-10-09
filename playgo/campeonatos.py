@@ -1,6 +1,8 @@
 """Campeonatos e torneios (RF-007, RF-008, RF-021, RF-022): cadastro, inscrição de equipes e convites.
 Sorteio, chaves, classificação e jogo ao vivo (RF-009) ficam em `chaves.py`."""
 
+import re
+import secrets
 import zlib
 from dataclasses import dataclass
 from datetime import date
@@ -9,7 +11,10 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session as SessaoORM
 
-from . import auditoria, notificacoes, planos
+from itsdangerous import BadSignature, URLSafeTimedSerializer
+
+from . import armazenamento, auditoria, notificacoes, planos, seguranca
+from .config import settings
 from .db import agora
 from .erros import ErroNegocio, NaoEncontrado, SemPermissao
 from .geo import distancia_sql, formatar_km
@@ -194,6 +199,73 @@ def editar(s: SessaoORM, campeonato_id: int, por: Usuario, **campos) -> Campeona
                 if e.capitao_id != por.id:
                     notificacoes.avisar(s, e.capitao_id, "campeonato", f"📅 {c.nome}: datas ou local atualizados", f"Início em {c.data_inicio.strftime('%d/%m/%Y')} · {c.local_nome}.", f"/campeonatos/{c.id}", None, f"campedit:{c.id}:{e.id}:{versao}")
     s.commit()
+    return c
+
+
+# ---------------------------------------------------------------- regulamento em PDF
+
+_SERIALIZADOR_PDF_SAL = "playgo-regulamento"
+VALIDADE_URL_PDF_S = 600
+
+
+def _serializador_pdf() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(seguranca.chave_sessao(), salt=_SERIALIZADOR_PDF_SAL)
+
+
+def url_regulamento(c: Campeonato, usuario_id: int) -> str | None:
+    """URL do PDF já autorizada para essa pessoa (vale poucos minutos): o link do app não manda o cabeçalho Bearer."""
+    if not c.regulamento_arquivo:
+        return None
+    token = _serializador_pdf().dumps({"c": c.id, "u": usuario_id})
+    return f"/campeonatos/{c.id}/regulamento.pdf?t={token}"
+
+
+def usuario_do_token_pdf(token: str, campeonato_id: int) -> int | None:
+    try:
+        d = _serializador_pdf().loads(token, max_age=VALIDADE_URL_PDF_S)
+    except BadSignature:
+        return None
+    return d["u"] if d.get("c") == campeonato_id else None
+
+
+def anexar_regulamento(s: SessaoORM, campeonato_id: int, por: Usuario, dados: bytes, nome_original: str | None) -> Campeonato:
+    """Guarda o PDF do regulamento (substitui o anterior). Só a organização."""
+    c = obter(s, campeonato_id)
+    exigir_gestao(c, por)
+    if c.status == C_CANCELADO:
+        raise ErroNegocio("Este campeonato foi cancelado e não pode mais ser alterado.")
+    limite = settings.limite_pdf_mb
+    if not dados:
+        raise ErroNegocio("O arquivo está vazio.")
+    if len(dados) > limite * 1024 * 1024:
+        raise ErroNegocio(f"O PDF passa de {limite} MB. Reduza o arquivo e envie de novo.")
+    if not dados.startswith(b"%PDF-"):
+        raise ErroNegocio("Envie um arquivo PDF.")
+    nome = re.sub(r"[^\w .()\-]", "", (nome_original or "regulamento.pdf").rsplit("/", 1)[-1].rsplit("\\", 1)[-1]).strip()[:150] or "regulamento.pdf"
+    if not nome.lower().endswith(".pdf"):
+        nome += ".pdf"
+    anterior = c.regulamento_arquivo
+    rel = f"regulamentos/{c.id}/{secrets.token_hex(16)}.pdf"
+    armazenamento.salvar(rel, dados, "application/pdf")
+    c.regulamento_arquivo, c.regulamento_nome, c.regulamento_em = rel, nome, agora()
+    auditoria.registrar(s, por.id, "campeonato_regulamento_pdf", "campeonato", c.id, arquivo=nome, bytes=len(dados))
+    for e in s.scalars(select(Equipe).where(Equipe.campeonato_id == c.id, Equipe.status.in_(ATIVAS_EQUIPE))):
+        if e.capitao_id != por.id:
+            notificacoes.avisar(s, e.capitao_id, "campeonato", f"📄 Regulamento de {c.nome} atualizado", "A organização enviou o regulamento em PDF.", f"/campeonatos/{c.id}", None, f"regpdf:{c.id}:{e.id}:{secrets.token_hex(3)}")
+    s.commit()
+    armazenamento.remover(anterior)
+    return c
+
+
+def remover_regulamento(s: SessaoORM, campeonato_id: int, por: Usuario) -> Campeonato:
+    c = obter(s, campeonato_id)
+    exigir_gestao(c, por)
+    anterior = c.regulamento_arquivo
+    if anterior:
+        c.regulamento_arquivo = c.regulamento_nome = c.regulamento_em = None
+        auditoria.registrar(s, por.id, "campeonato_regulamento_pdf_remover", "campeonato", c.id)
+        s.commit()
+        armazenamento.remover(anterior)
     return c
 
 

@@ -28,8 +28,37 @@
   <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn purple">Salvar alterações</button><a class="btn soft" href="/campeonatos/{{ k.id }}">Cancelar</a></div>
   <p class="aviso" id="erro-editar" style="display:none"></p>
 </form>
+<div class="panel" style="max-width:760px;margin-top:18px">
+  <h3>📄 Regulamento em PDF</h3>
+  <p class="suave">Suba o regulamento definido nas reuniões. Todos os usuários logados poderão abrir o arquivo na página do campeonato, e os capitães são avisados.</p>
+  {% if k.regulamento_pdf %}
+  <p><a href="{{ k.regulamento_pdf.url }}" target="_blank" rel="noopener"><b>{{ k.regulamento_pdf.nome }}</b></a>
+    <span class="suave">· enviado em {{ k.regulamento_pdf.em[8:10] }}/{{ k.regulamento_pdf.em[5:7] }}/{{ k.regulamento_pdf.em[0:4] }}</span>
+    <button type="button" class="link-botao" id="bt-pdf-remover" style="color:var(--red);margin-left:8px">Remover</button></p>
+  {% endif %}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input type="file" id="arq-pdf" accept="application/pdf,.pdf">
+    <button type="button" class="btn soft" id="bt-pdf">{{ 'Trocar o PDF' if k.regulamento_pdf else 'Enviar PDF' }}</button>
+  </div>
+  <p class="suave">Só arquivos PDF{% if limite_pdf_mb %}, até {{ limite_pdf_mb }} MB{% endif %}.</p>
+</div>
 <script>
   window.addEventListener('load', function () {
+    const enviar = document.getElementById('bt-pdf');
+    enviar.addEventListener('click', async () => {
+      const arq = document.getElementById('arq-pdf').files[0];
+      if (!arq) { toast('Escolha o arquivo PDF.'); return; }
+      const form = new FormData();
+      form.append('arquivo', arq);
+      enviar.disabled = true;
+      try { await webApi('/campeonatos/{{ k.id }}/regulamento', { metodo: 'POST', form }); location.reload(); }
+      catch (e) { toast(e.message); enviar.disabled = false; }
+    });
+    const remover = document.getElementById('bt-pdf-remover');
+    if (remover) remover.addEventListener('click', async () => {
+      if (!confirm('Remover o PDF do regulamento?')) return;
+      try { await webApi('/campeonatos/{{ k.id }}/regulamento', { metodo: 'DELETE' }); location.reload(); } catch (e) { toast(e.message); }
+    });
     const f = document.getElementById('f-editar');
     f.addEventListener('submit', async (ev) => {
       ev.preventDefault();

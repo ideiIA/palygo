@@ -3,7 +3,10 @@
 from fastapi import Request
 from fastapi.responses import RedirectResponse
 
-from .. import campeonatos, detalhes
+from .. import armazenamento, campeonatos, detalhes
+from ..config import settings
+from ..erros import NaoEncontrado
+from ..models import Usuario
 from ..deps import Atual, Sessao
 from .app import app, pagina
 
@@ -28,13 +31,23 @@ def tela_jogo(campeonato_id: int, jogo_id: int, request: Request, s: Sessao, usu
     return _sub(request, s, usuario, campeonato_id, "jogo", jogo_id=jogo_id)
 
 
+@app.get("/campeonatos/{campeonato_id}/regulamento.pdf")
+def baixar_regulamento(campeonato_id: int, request: Request, s: Sessao, t: str = ""):
+    uid = campeonatos.usuario_do_token_pdf(t, campeonato_id) if t else request.session.get("usuario_id")
+    usuario = s.get(Usuario, uid) if uid else None
+    c = campeonatos.obter(s, campeonato_id)
+    if usuario is None or not usuario.ativo or not c.regulamento_arquivo:
+        raise NaoEncontrado("Regulamento não encontrado.")
+    return armazenamento.servir(c.regulamento_arquivo, "application/pdf", "private, max-age=300")
+
+
 @app.get("/campeonatos/{campeonato_id}/editar")
 def tela_editar(campeonato_id: int, request: Request, s: Sessao, usuario: Atual):
     c = campeonatos.obter(s, campeonato_id)
     if not campeonatos.pode_gerir(c, usuario):
         request.session["erro"] = "Só a organização do campeonato pode editá-lo."
         return RedirectResponse(f"/campeonatos/{campeonato_id}", status_code=303)
-    return pagina(request, s, usuario, "campeonato_editar.html", "campeonatos", k=detalhes.campeonato(s, c, usuario))
+    return pagina(request, s, usuario, "campeonato_editar.html", "campeonatos", k=detalhes.campeonato(s, c, usuario), limite_pdf_mb=settings.limite_pdf_mb)
 
 
 @app.get("/campeonatos/{campeonato_id}/sorteio")

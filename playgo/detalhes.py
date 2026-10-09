@@ -109,6 +109,7 @@ def campeonato(s: SessaoORM, c: Campeonato, usuario: Usuario | None) -> dict:
             "descricao": c.descricao,
             "regulamento": c.regulamento,
             "cadastro_elenco": bool(c.cadastro_elenco),
+            "regulamento_pdf": {"nome": c.regulamento_nome, "url": campeonatos.url_regulamento(c, usuario.id) if usuario else None, "em": c.regulamento_em.isoformat(timespec="minutes")} if c.regulamento_arquivo else None,
             "edicao": {
                 "nome": c.nome, "categoria": c.categoria, "descricao": c.descricao, "regulamento": c.regulamento, "premiacao": c.premiacao,
                 "premiacao_valor": float(c.premiacao_valor) if c.premiacao_valor is not None else None, "local_nome": c.local_nome,

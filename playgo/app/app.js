@@ -472,7 +472,8 @@
         <b>${k.equipes}/${k.max_equipes} equipes • ${k.vagas} vaga${k.vagas !== 1 ? 's' : ''}</b>${barra(k.equipes, k.max_equipes)}
         ${k.inscricoes_abertas ? `<form id="f-eq" class="painel" style="margin-top:12px"><h3>${(ms.equipes || []).length ? 'Inscrever outra equipe' : 'Inscrever minha equipe'}</h3>${(ms.equipes || []).length ? `<p class="suave">Você está em: ${ms.equipes.map((e) => esc(e.nome)).join(', ')}.</p>` : ''}<div class="campo" style="margin-top:10px"><input name="nome" required maxlength="100" placeholder="Nome da equipe"></div><button class="btn roxo bloco">Inscrever equipe</button><p class="suave" style="margin-top:8px">Você será o capitão e convida os jogadores depois. O organizador confirma a inscrição.</p></form>` : ''}
         ${k.descricao ? `<div class="painel" style="margin-top:12px"><h3>Sobre</h3><p style="margin-top:6px">${esc(k.descricao)}</p></div>` : ''}
-        ${k.regulamento ? `<div class="painel"><h3>Regulamento</h3><p style="margin-top:6px;white-space:pre-line">${esc(k.regulamento)}</p></div>` : ''}
+        ${k.regulamento_pdf ? `<div class="painel"><h3>Regulamento</h3><a class="btn roxo bloco" style="margin-top:8px" href="${esc(k.regulamento_pdf.url)}" target="_blank" rel="noopener">📄 Abrir o regulamento em PDF</a><p class="suave" style="margin-top:6px">${esc(k.regulamento_pdf.nome)}</p></div>` : ''}
+        ${k.regulamento ? `<div class="painel"><h3>${k.regulamento_pdf ? 'Resumo do regulamento' : 'Regulamento'}</h3><p style="margin-top:6px;white-space:pre-line">${esc(k.regulamento)}</p></div>` : ''}
         <div class="painel" style="margin-top:12px"><h3>Equipes (${k.equipes_lista.length})</h3>
         ${k.equipes_lista.length ? k.equipes_lista.map((e) => `<div style="padding:10px 0;border-top:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(e.nome)}</b><span class="tag ${e.status === 'confirmada' ? 'verde' : 'laranja'}">${e.status === 'confirmada' ? 'Confirmada' : 'Pendente'}</span></div>
           <div class="suave">Capitão: ${esc(e.capitao)} • ${e.membros.filter((m) => m.status === 'confirmado').length}/${k.atletas_por_equipe}${k.cadastro_elenco && e.componentes ? ' • ' + e.componentes + ' no elenco' : ''}</div>
@@ -543,7 +544,21 @@
         <div class="campo"><label>Sobre</label><textarea name="descricao" rows="3">${v(e.descricao)}</textarea></div>
         <div class="campo"><label>Regulamento</label><textarea name="regulamento" rows="6">${v(e.regulamento)}</textarea></div>
         <label class="suave" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px"><input type="checkbox" name="cadastro_elenco" ${e.cadastro_elenco ? 'checked' : ''} style="margin-top:3px"><span>Liberar o cadastro do elenco: o capitão de cada equipe informa nome e RG dos componentes, o técnico e quem é o capitão. O RG só aparece para a organização e para o capitão.</span></label>
-        <button class="btn roxo bloco">Salvar alterações</button></form>`, () => {
+        <button class="btn roxo bloco">Salvar alterações</button></form>
+        <div class="painel" style="margin-top:12px"><h3>📄 Regulamento em PDF</h3>
+          <p class="suave" style="margin:6px 0 10px">Suba o regulamento definido nas reuniões. Todos podem abrir o arquivo na página do campeonato.</p>
+          ${k.regulamento_pdf ? `<p><a href="${esc(k.regulamento_pdf.url)}" target="_blank" rel="noopener"><b>${esc(k.regulamento_pdf.nome)}</b></a> <button type="button" class="btn perigo pequeno" id="bt-pdf-rm">Remover</button></p>` : ''}
+          <div class="campo"><input type="file" id="arq-pdf" accept="application/pdf,.pdf"></div>
+          <button type="button" class="btn suave bloco" id="bt-pdf">${k.regulamento_pdf ? 'Trocar o PDF' : 'Enviar PDF'}</button></div>`, () => {
+        $('#bt-pdf').onclick = async () => {
+          const arq = $('#arq-pdf').files[0];
+          if (!arq) { toast('Escolha o arquivo PDF.'); return; }
+          const form = new FormData();
+          form.append('arquivo', arq);
+          try { await api('/campeonatos/' + id + '/regulamento', { metodo: 'POST', form }); toast('PDF enviado.'); vEditarCampeonato(id); } catch (er) { toast(er.message); }
+        };
+        const rm = $('#bt-pdf-rm');
+        if (rm) rm.onclick = async () => { if (!confirm('Remover o PDF do regulamento?')) return; try { await api('/campeonatos/' + id + '/regulamento', { metodo: 'DELETE' }); vEditarCampeonato(id); } catch (er) { toast(er.message); } };
         $('#f-editar').onsubmit = async (ev) => {
           ev.preventDefault();
           const d = dadosForm(ev.target);
