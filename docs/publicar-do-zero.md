@@ -1,5 +1,7 @@
 # Publicar o PlayGo do zero — servidor próprio, sem Supabase e sem Vercel
 
+> Todas as variáveis, o banco e os comandos do dia a dia estão em [referencia-producao.md](referencia-producao.md).
+
 Este roteiro coloca o site, o app (PWA) e a API no ar em **um servidor seu**, com o **Postgres em produção criado por você** e
 **credenciais novas**. Tudo foi testado em contêineres (Docker): o banco sobe vazio, o PlayGo cria as tabelas, os gatilhos de
 auditoria e os esportes iniciais sozinho, e o primeiro cadastro vira o administrador.
@@ -103,6 +105,12 @@ Coloque o ID e a chave no `deploy/.env` e aplique: `docker compose --env-file .e
 2. Em **Integrações → Webhooks**: URL `https://playgo.ideiiaapp.com.br/api/v1/cobranca/asaas`, **token = `PLAYGO_ASAAS_WEBHOOK_TOKEN`
    do seu `.env`** (o gerador já criou e mostrou), eventos de Cobranças e Assinaturas.
 3. Faça uma assinatura de teste. Para produção, troque `PLAYGO_ASAAS_AMBIENTE=producao` e a chave.
+
+## 7b. Instagram do PlayGo (opcional)
+
+Preencha `PLAYGO_INSTAGRAM_APP_ID` e `PLAYGO_INSTAGRAM_APP_SECRET` no `deploy/.env`, cadastre no app da Meta a URI de retorno
+`https://playgo.ideiiaapp.com.br/instagram/retorno`, aplique (`docker compose --env-file .env up -d`) e, como administrador, use
+**Administração → Conectar Instagram**. Detalhes em [instagram.md](instagram.md).
 
 ## 8. Backups (não pule)
 
