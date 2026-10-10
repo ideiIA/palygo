@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     url_publica: str = ""  # ex.: https://palygo.vercel.app
 
+    # Instagram do PlayGo (@playgo.sports): app da Meta (developers.facebook.com). A conta se conecta por botão, sem colar token.
+    instagram_app_id: str = ""
+    instagram_app_secret: str = ""
+    instagram_versao: str = "v21.0"
+
     # Planos e cobrança (Asaas). Sem chave, o app funciona e o admin libera planos à mão.
     teste_dias: int = 30
     tolerancia_dias: int = 7

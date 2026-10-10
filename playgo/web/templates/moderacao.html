@@ -4,6 +4,8 @@
 <div class="section-title"><h2>🛡 Fila de moderação</h2></div>
 <p class="suave" style="margin:-6px 0 14px">Aqui chegam as publicações e comentários que a análise automática segurou (ou que juntaram várias denúncias). Eles <b>não aparecem para ninguém</b> além do autor até você decidir. Você só aprova ou rejeita — nunca edita o conteúdo de outra pessoa. Para tirar do ar algo já publicado, use <b>Ocultar</b> no próprio mural.</p>
 <div id="fila" class="lista-fila"><p class="vazio">Carregando…</p></div>
+<div id="instagram-fila"></div>
+<script src="/static/instagram.js"></script>
 <script>
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   async function carregar() {
@@ -29,6 +31,9 @@
     try { await webApi(`/moderacao/${art.dataset.tipo}/${art.dataset.id}/decidir`, { metodo: 'POST', corpo: { aprovar: b.dataset.decisao === '1' } }); toast('Decisão registrada.'); carregar(); }
     catch (e) { toast(e.message); }
   });
-  window.addEventListener('load', carregar);
+  window.addEventListener('load', () => {
+    carregar();
+    InstagramFila.montar(document.getElementById('instagram-fila'), { get: (c) => webApi(c), post: (c, b) => webApi(c, { metodo: 'POST', corpo: b || {} }), toast: window.toast });
+  });
 </script>
 {% endblock %}

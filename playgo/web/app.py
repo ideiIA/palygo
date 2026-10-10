@@ -36,6 +36,7 @@ from .. import (
 from .. import serializadores as ser
 from ..api.chaves import router as api_chaves
 from ..api.elenco import router as api_elenco
+from ..api.instagram import router as api_instagram
 from ..api.mural import router as api_mural
 from ..api.planos import router as api_planos
 from ..api.v1 import router as api_v1
@@ -72,6 +73,7 @@ app.include_router(api_mural)
 app.include_router(api_planos)
 app.include_router(api_chaves)
 app.include_router(api_elenco)
+app.include_router(api_instagram)
 templates = Jinja2Templates(directory=PASTA / "templates")
 
 
@@ -634,4 +636,4 @@ def marcar_lidas(s: Sessao, usuario: Atual):
 
 
 # Rotas do mural, comunidades, termos e privacidade vivem em outro módulo (importado aqui no fim para evitar ciclo).
-from . import rotas_chaves, rotas_google, rotas_mural  # noqa: E402,F401
+from . import rotas_chaves, rotas_google, rotas_instagram, rotas_mural  # noqa: E402,F401

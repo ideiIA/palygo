@@ -704,8 +704,28 @@ class Publicacao(Base):
     editado_em: Mapped[datetime | None] = mapped_column(DateTime)
     excluido_em: Mapped[datetime | None] = mapped_column(DateTime)
 
+    # Compartilhamento no Instagram do PlayGo: aguardando | aprovada | publicada | recusada | erro (nulo = não pedido)
+    instagram_status: Mapped[str | None] = mapped_column(String(10))
+    instagram_consentimento_em: Mapped[datetime | None] = mapped_column(DateTime)
+    instagram_media_id: Mapped[str | None] = mapped_column(String(40))
+    instagram_permalink: Mapped[str | None] = mapped_column(String(300))
+    instagram_erro: Mapped[str | None] = mapped_column(String(200))
+    instagram_em: Mapped[datetime | None] = mapped_column(DateTime)
+
     autor: Mapped[Usuario] = relationship(lazy="joined")
     midias: Mapped[list["Midia"]] = relationship(cascade="all, delete-orphan", order_by="Midia.id", lazy="selectin")
+
+
+class ConfigExterna(Base):
+    """Credenciais de integrações guardadas pelo próprio sistema (ex.: token do Instagram, que se renova sozinho)."""
+
+    __tablename__ = "config_externa"
+
+    chave: Mapped[str] = mapped_column(String(40), primary_key=True)
+    valor: Mapped[str | None] = mapped_column(Text)
+    meta: Mapped[dict | None] = mapped_column(JSONB)
+    expira_em: Mapped[datetime | None] = mapped_column(DateTime)
+    atualizado_em: Mapped[datetime] = mapped_column(DateTime, default=agora)
 
 
 class PublicacaoVersao(Base):

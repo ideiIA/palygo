@@ -114,3 +114,7 @@ A raiz `/` mostra, para quem não está logado, a página de divulgação (`temp
 ## Publicar em servidor próprio (sem Supabase/Vercel)
 
 `docs/publicar-do-zero.md`: roteiro completo com Docker (aplicativo + Postgres + HTTPS), `deploy/gerar_credenciais.py` (credenciais novas), `deploy/criar_banco.py` (cria usuário e banco em qualquer Postgres), `deploy/backup.sh` e a alternativa com banco externo.
+
+## Instagram do PlayGo
+
+Publicações marcadas pelo autor ('Compartilhar no Instagram do PlayGo') entram numa fila de aprovação da equipe e são publicadas no @playgo.sports pela API oficial da Meta. A conta é conectada por botão (Administração → Instagram) e o token se renova sozinho. Veja `docs/instagram.md`.

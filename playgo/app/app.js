@@ -883,7 +883,9 @@
           <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0">${esc(i.texto)}</div>
           ${i.midias && i.midias.length ? i.midias.map((m) => m.tipo === 'video' ? `<video controls preload="metadata" src="${esc(m.url)}" style="max-width:100%;border-radius:10px;margin-top:6px"></video>` : `<img src="${esc(m.miniatura || m.url)}" style="max-width:100%;border-radius:10px;margin-top:6px">`).join('') : ''}
           ${i.local ? `<p class="suave">📍 ${esc(i.local.nome)}</p>` : ''}
-          <div style="display:flex;gap:8px;margin-top:10px"><button class="btn roxo" data-acao="decidir-fila" data-tipo="${i.tipo}" data-id="${i.id}" data-v="1">Aprovar</button><button class="btn perigo" data-acao="decidir-fila" data-tipo="${i.tipo}" data-id="${i.id}" data-v="0">Rejeitar</button></div></article>`).join('') : '<p class="vazio">🎉 Nada aguardando análise.</p>'}`);
+          <div style="display:flex;gap:8px;margin-top:10px"><button class="btn roxo" data-acao="decidir-fila" data-tipo="${i.tipo}" data-id="${i.id}" data-v="1">Aprovar</button><button class="btn perigo" data-acao="decidir-fila" data-tipo="${i.tipo}" data-id="${i.id}" data-v="0">Rejeitar</button></div></article>`).join('') : '<p class="vazio">🎉 Nada aguardando análise.</p>'}<div id="instagram-fila"></div>`, () => {
+        InstagramFila.montar($('#instagram-fila'), { get: (c) => api(c), post, toast });
+      });
     } catch (e) { erroTela(e); }
   }
 

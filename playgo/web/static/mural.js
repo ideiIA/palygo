@@ -94,14 +94,29 @@
         <div class="mu-barra">
           <label class="mu-btn cinza peq">📷 Foto ou vídeo<input type="file" data-a="arquivos" accept="${ACEITA}" multiple hidden></label>
           ${S.escopo && S.escopo.pode_replicar ? '<label class="mu-rep"><input type="checkbox" name="replicar"> Mostrar também no feed geral</label>' : ''}
+          ${S.instagram ? '<label class="mu-rep mu-ig"><input type="checkbox" name="instagram"> 📸 Compartilhar no Instagram do PlayGo</label>' : ''}
           <button class="mu-btn" data-enviar>Publicar</button>
         </div>
+        ${S.instagram ? '<p class="mu-nota mu-ig-nota">Para ir ao Instagram: precisa ter foto ou vídeo e ser do feed geral. Passa pela aprovação da equipe do PlayGo e, depois de publicada lá, só a equipe consegue removê-la.</p>' : ''}
         <p class="mu-nota">Toda publicação mostra o local e passa por análise automática antes de aparecer para os outros. Você pode excluir na primeira hora; depois, só um moderador oculta.</p>
       </form>`;
     }
 
     // ---------------------------------------------------------------- publicação
-    function selo(p) {
+    function seloIg(p) {
+      const i = p.instagram;
+      if (!i) return '';
+      if (i.status === 'publicada') return `<div class="mu-aviso ig">📸 ${i.link ? `<a href="${esc(i.link)}" target="_blank" rel="noopener">Publicada no Instagram do PlayGo ↗</a>` : 'Publicada no Instagram do PlayGo'}</div>`;
+      if (i.status === 'aguardando') return '<div class="mu-aviso ig">📸 Aguardando a equipe do PlayGo para ir ao Instagram.</div>';
+      if (i.status === 'aprovada') return '<div class="mu-aviso ig">📸 Aprovada: vai ao Instagram do PlayGo em instantes.</div>';
+      if (i.status === 'recusada') return '<div class="mu-aviso ig">📸 Não foi escolhida para o Instagram (continua aqui no PlayGo).</div>';
+      if (i.status === 'erro') return '<div class="mu-aviso ig">📸 Houve um problema ao enviar ao Instagram; a equipe vai tentar de novo.</div>';
+      return '';
+    }
+
+    function selo(p) { return seloBase(p) + seloIg(p); }
+
+    function seloBase(p) {
       if (p.status === 'em_analise') return `<div class="mu-aviso em">⏳ Em análise — só você vê por enquanto.${eu.admin && p.motivo_analise ? ' <b>Motivo:</b> ' + esc(p.motivo_analise) : ''}</div>`;
       if (p.status === 'oculta') return `<div class="mu-aviso oc">🚫 Oculta por ${p.oculta_por_papel === 'admin' ? 'um administrador' : 'um moderador'}${p.oculta_motivo ? ': ' + esc(p.oculta_motivo) : ''}</div>`;
       if (p.status === 'rejeitada') return '<div class="mu-aviso oc">❌ Não aprovada: viola os termos de uso e não é exibida.</div>';
@@ -182,6 +197,7 @@
     async function carregar(mais) {
       const r = await chamar(caminhoLista(mais ? S.proxima : null));
       if (r.escopo) S.escopo = r.escopo;
+      if (r.instagram !== undefined) S.instagram = r.instagram;
       S.itens = mais ? S.itens.concat(r.itens) : r.itens;
       S.proxima = r.proxima;
     }
@@ -217,7 +233,9 @@
       const texto = c.querySelector('textarea').value;
       const nome = (c.querySelector('[name=local_nome]') || {}).value;
       const rep = (c.querySelector('[name=replicar]') || {}).checked;
+      const ig = (c.querySelector('[name=instagram]') || {}).checked;
       c.innerHTML = htmlComposer();
+      if (ig && c.querySelector('[name=instagram]')) c.querySelector('[name=instagram]').checked = true;
       c.querySelector('textarea').value = texto;
       if (nome && c.querySelector('[name=local_nome]')) c.querySelector('[name=local_nome]').value = nome;
       if (rep && c.querySelector('[name=replicar]')) c.querySelector('[name=replicar]').checked = true;
@@ -248,6 +266,7 @@
           fd.append('local_nome', f.local_nome ? f.local_nome.value : '');
         }
         fd.append('replicar_geral', f.replicar && f.replicar.checked ? 'true' : 'false');
+        fd.append('compartilhar_instagram', f.instagram && f.instagram.checked ? 'true' : 'false');
         for (const a of S.anexos) fd.append('arquivos', await reduzir(a));
         const botao = f.querySelector('[data-enviar]');
         botao.disabled = true; botao.textContent = 'Enviando…';

@@ -51,6 +51,8 @@ ORM alternativo ou framework de front sem pedido explícito.
 
 - **Publicação própria** (`Dockerfile`, `deploy/`, `docs/publicar-do-zero.md`): o mesmo código roda fora do Vercel/Supabase com `PLAYGO_ARMAZENAMENTO=local` (volume), agendador interno e `PLAYGO_COOKIE_SEGURO`/`PLAYGO_CONFIAR_PROXY` atrás do Caddy; `/saude` é a verificação de saúde. Dependências do servidor em `requirements-servidor.txt` (o `requirements.txt` do Vercel não leva o uvicorn).
 
+- **Instagram** (`instagram.py`, `api/instagram.py`, `web/rotas_instagram.py`, `static/instagram.js`): só vai com **consentimento do autor** (`compartilhar_instagram`, só feed geral e com mídia) **e** aprovação da equipe; nunca publicar direto. A API da Meta não exclui posts. O token fica em `ConfigExterna` (renova sozinho); o ID/chave do app vêm do ambiente e a chave **nunca** vai para o git. `instagram._http`/`_pausa` são trocados nos testes.
+
 ## Comandos
 
 ```powershell

@@ -12,6 +12,7 @@ from .. import (
     contas,
     convites,
     escopos,
+    instagram,
     midia,
     moderacao,
     privacidade,
@@ -92,7 +93,9 @@ def _alvo(s, arroba: str):
 @router.get("/mural/geral")
 def feed_geral(u: AtualApi, s: Sessao, lat: float | None = None, lng: float | None = None, raio: float | None = None, antes_de: int | None = None):
     """Feed de todo o app. Com lat/lng, mostra a distância de cada publicação; com `raio`, só as próximas."""
-    return publicacoes.feed_geral(s, u, lat, lng, raio or None, antes_de)
+    res = publicacoes.feed_geral(s, u, lat, lng, raio or None, antes_de)
+    res["instagram"] = instagram.ativo(s)  # o formulário só mostra "Compartilhar no Instagram" com a conta conectada
+    return res
 
 
 @router.get("/mural/{escopo}/{escopo_id}")
@@ -100,6 +103,7 @@ def mural(escopo: str, escopo_id: int, u: AtualApi, s: Sessao, lat: float | None
     centro = (lat, lng) if lat is not None and lng is not None else None
     res = publicacoes.mural(s, u, escopo, escopo_id, antes_de, centro=centro)
     ctx = escopos.contexto(s, escopo, escopo_id)
+    res["instagram"] = instagram.ativo(s)
     res["escopo"] = {"tipo": escopo, "id": escopo_id, "titulo": ctx["titulo"], "link": ctx["link"], "local_fixo": ctx["latitude"] is not None, "pode_replicar": escopos.pode_replicar(s, escopo, escopo_id), "sou_moderador": escopos.eh_moderador(s, u, escopo, escopo_id)}
     return res
 
@@ -108,12 +112,12 @@ def mural(escopo: str, escopo_id: int, u: AtualApi, s: Sessao, lat: float | None
 def criar_publicacao(
     tarefas: BackgroundTasks, u: AtualApi, s: Sessao, escopo: str = Form("geral"), escopo_id: int | None = Form(None), texto: str = Form(""),
     latitude: float | None = Form(None), longitude: float | None = Form(None), local_nome: str = Form(""), replicar_geral: bool = Form(False),
-    arquivos: list[UploadFile] = File(default=[]),
+    arquivos: list[UploadFile] = File(default=[]), compartilhar_instagram: bool = Form(False),
 ):
     """multipart/form-data. O local é obrigatório (vem do evento nas atividades e campeonatos). Entra 'em análise'
     e a pré-análise por IA roda em segundo plano."""
     dados = [midia.ler_upload(a) for a in arquivos if a.filename]
-    p = publicacoes.criar(s, u, escopo, escopo_id, texto, latitude, longitude, local_nome, replicar_geral, dados)
+    p = publicacoes.criar(s, u, escopo, escopo_id, texto, latitude, longitude, local_nome, replicar_geral, dados, compartilhar_instagram)
     apos(tarefas, moderacao.processar_publicacao, p.id)
     return publicacoes.serializar(s, p, u)
 

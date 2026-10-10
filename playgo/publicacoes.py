@@ -109,8 +109,10 @@ def criar(
     local_nome: str | None = None,
     replicar_geral: bool = False,
     arquivos: list[bytes] | None = None,
+    compartilhar_instagram: bool = False,
 ) -> Publicacao:
-    """Cria em análise; quem chamou dispara `moderacao.processar_publicacao`. O local é obrigatório."""
+    """Cria em análise; quem chamou dispara `moderacao.processar_publicacao`. O local é obrigatório.
+    `compartilhar_instagram` é o consentimento explícito do autor para a equipe poder publicar no Instagram do PlayGo."""
     planos.exigir(s, autor, "basico")
     texto = (texto or "").strip()
     arquivos = arquivos or []
@@ -137,7 +139,18 @@ def criar(
     local_nome = (local_nome or "").strip()[:200] or "Local marcado no mapa"
 
     recebidas = [midia.processar(d) for d in arquivos]  # valida tudo antes de gravar qualquer coisa
+    if compartilhar_instagram:
+        from . import instagram
+
+        if not instagram.ativo(s):
+            raise ErroNegocio("O compartilhamento no Instagram do PlayGo não está ativo.")
+        if not (escopo == "geral" or replicar_geral):
+            raise ErroNegocio("Só publicações do feed geral (ou replicadas nele) podem ir para o Instagram do PlayGo.")
+        if not recebidas:
+            raise ErroNegocio("Para ir ao Instagram a publicação precisa de uma foto ou um vídeo.")
     p = Publicacao(autor_id=autor.id, escopo=escopo, escopo_id=escopo_id, texto=texto, latitude=latitude, longitude=longitude, local_nome=local_nome, replicar_geral=replicar_geral)
+    if compartilhar_instagram:
+        p.instagram_status, p.instagram_consentimento_em = "aguardando", agora()
     gravados: list[str | None] = []
     try:
         for rec in recebidas:
@@ -146,7 +159,7 @@ def criar(
             p.midias.append(Midia(tipo=rec.tipo, arquivo=arq, miniatura=mini, mime=rec.mime, tamanho=len(rec.dados), sha256=sha))
         s.add(p)
         s.flush()
-        auditoria.registrar(s, autor.id, "publicacao_criar", "publicacao", p.id, escopo=escopo, escopo_id=escopo_id, midias=len(recebidas), replicar_geral=replicar_geral)
+        auditoria.registrar(s, autor.id, "publicacao_criar", "publicacao", p.id, escopo=escopo, escopo_id=escopo_id, midias=len(recebidas), replicar_geral=replicar_geral, instagram=compartilhar_instagram)
         s.commit()
     except Exception:
         s.rollback()
@@ -456,6 +469,10 @@ def serializar(s: SessaoORM, p: Publicacao, usuario: Usuario, ctx: dict | None =
     visiveis_midia = pode_ver(s, usuario, p)
     return {
         "id": p.id,
+        "instagram": (
+            {"status": p.instagram_status, "link": p.instagram_permalink if p.instagram_status == "publicada" else None}
+            if p.instagram_status and (p.instagram_status == "publicada" or dono or usuario.equipe_moderacao) else None
+        ),
         "autor": {"id": p.autor_id, "usuario": p.autor.usuario, "arroba": p.autor.arroba, "iniciais": p.autor.iniciais, "foto_url": p.autor.foto_url},
         "escopo": p.escopo,
         "escopo_id": p.escopo_id,

@@ -17,6 +17,10 @@
   <p class="suave" style="margin:0 0 10px">Defina preço e limites. Plano com valor R$ 0 não pode ser assinado. Campos de limite em branco = sem limite.</p>
   <div id="planos-admin" class="pessoas"></div>
 </div>
+<div class="panel" style="margin-bottom:18px" id="painel-instagram">
+  <h2>📸 Instagram do PlayGo</h2>
+  <div id="estado-instagram" class="suave">Carregando…</div>
+</div>
 <form class="filtros" id="filtros">
   <div class="campo"><label>Buscar</label><input name="q" placeholder="@usuario, nome ou e-mail"></div>
   <div class="campo"><label>Perfil</label><select name="perfil"><option value="">Todos</option><option value="admin">Administradores</option><option value="moderador">Moderadores gerais</option><option value="usuario">Usuários</option></select></div>
@@ -78,6 +82,20 @@
       try { await webApi('/admin/usuarios/' + conceder.dataset.plano + '/plano', { metodo: 'POST', corpo: { plano: plano.trim(), ate } }); toast('Plano atualizado.'); carregar(); } catch (e) { toast(e.message); }
     }
   });
-  window.addEventListener('load', () => { carregar(); carregarPlanos(); });
+  async function carregarInstagram() {
+    const el = document.getElementById('estado-instagram');
+    try {
+      const e = await webApi('/instagram/estado');
+      if (e.conectado) {
+        el.innerHTML = `Conectado como <b>@${esc(e.usuario)}</b> (token válido até ${esc((e.expira_em || '').slice(0, 10))}; renova sozinho). <a class="btn soft pequeno" href="/instagram/conectar">Reconectar</a> <button class="link-botao" id="bt-ig-desc" style="color:var(--red)">Desconectar</button><br><span class="suave">A fila de aprovação está em <a href="/moderacao">Moderação</a>.</span>`;
+        document.getElementById('bt-ig-desc').onclick = async () => { if (!confirm('Desconectar o Instagram? Os autores deixam de ver a opção de compartilhar.')) return; try { await webApi('/instagram/desconectar', { metodo: 'POST', corpo: {} }); carregarInstagram(); } catch (x) { toast(x.message); } };
+      } else if (e.app_configurado) {
+        el.innerHTML = `Ainda não conectado. <a class="btn purple" href="/instagram/conectar">Conectar Instagram</a><br><span class="suave">Entre com o @playgo.sports quando o Instagram pedir. A URI de retorno cadastrada no app da Meta deve ser <code>${esc(e.redirect_uri)}</code>.</span>`;
+      } else {
+        el.innerHTML = 'Falta configurar o app da Meta no servidor: <code>PLAYGO_INSTAGRAM_APP_ID</code>, <code>PLAYGO_INSTAGRAM_APP_SECRET</code> e <code>PLAYGO_URL_PUBLICA</code>. Veja <code>docs/instagram.md</code>.';
+      }
+    } catch (x) { el.textContent = x.message; }
+  }
+  window.addEventListener('load', () => { carregar(); carregarPlanos(); carregarInstagram(); });
 </script>
 {% endblock %}
